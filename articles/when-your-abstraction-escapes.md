@@ -190,7 +190,7 @@ But there was a deeper insight: **there is no generic "Set" operation.** All ext
 
 The cell became an interpretation VM. Each cell was a tiny virtual machine defined by its `interpretation` function. All modification was done via communicating operations to yourself or other cells. > The op log itself became the value–in memory-space A, the value is the live POJO; across the edge, the value is the replayable log.
 
-This was more than a metaphor. Each cell truly is a virtual machine–it processes a sequence of Pulses through its interpretation function to produce a materialized value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value–it stores the operations, and the interpretation projects those operations into a value. This separation–between the stored operations (the CAnATL) and the interpretation (the VM)–is what makes cells serializable. The operations are data. The interpretation is provided at runtime.
+This was more than a metaphor. Each cell truly is a virtual machine–it processes a sequence of Pulses through its interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value–it stores the operations, and the interpretation projects those operations into a value. This separation–between the stored operations (the CAnATL) and the interpretation (the VM)–is what makes cells serialisable. The operations are data. The interpretation is provided at runtime.
 
 As we refined the model, we realised: "In this model, each cell is a tiny VM defined by 'interpretation'."
 
@@ -216,9 +216,9 @@ The key shift: instead of each change emitting individual pulses that triggered 
 
 This had profound implications. By only using the pulse to communicate change, and by using the node's change time as the trigger, we enabled **collection semantics**. Multiple changes to a node could be batched. The system could wait for quiescence before propagating, collecting all the mutations that happened within a single logical tick.
 
-The performance benefits were immediate. Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimization–it was a fundamental shift in how the network reasoned about change.
+The performance benefits were immediate. Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimisation–it was a fundamental shift in how the network reasoned about change.
 
-Collection semantics opened up optimization opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
+Collection semantics opened up optimisation opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
 
 This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state–they were part of the state itself.
 
@@ -228,13 +228,13 @@ This organic evolution from log-based to P-REL based wasn't planned, but it was 
 
 As we refined the model, another subtle but critical shift occurred. Initially, we assumed that pulses would propagate directly to nodes–links were just "pipes" that carried pulses from one node to another. But when we defined Link Relations, we departed from this model entirely.
 
-> "Until now, we assumed links were just 'pipes.' But in a serializable propagator network, the **Link is a Filter/Transformer.**"
+> "Until now, we assumed links were just 'pipes.' But in a serialisable propagator network, the **Link is a Filter/Transformer.**"
 
 A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**–not just passing pulses through. This wasn't just a refinement–it was a fundamental departure from automatic propagation.
 
-Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serializing data; you are serializing a **Policy of Movement**.
+Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**.
 
-This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value. The propagation policy is part of the data structure itself, not a runtime behavior.
+This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value. The propagation policy is part of the data structure itself, not a runtime behaviour.
 
 ---
 
@@ -262,7 +262,7 @@ This four-layer distinction matters because:
 - Relations are pure and don't mutate
 - The implementation controls when nodes actually update (timestamp check)
 - DELTA bridges local updates to network communication
-- RECV is the serializable message format
+- RECV is the serialisable message format
 
 The separation between computation (relations), conditional updates (implementation), communication generation (DELTA), and transmission (system) is what makes RaCSTS both deterministic and distributable.
 
@@ -286,7 +286,7 @@ This continues until quiescence–a round where no nodes are updated. The method
 
 **Why This Matters:**
 
-Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is separate from the communication layer that handles synchronization between different P-REL instances.
+Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is separate from the communication layer that handles synchronisation between different P-REL instances.
 
 ---
 
@@ -347,17 +347,17 @@ This abstraction was powerful–it let us defer the specific implementation whil
 
 **The Vector Clock Model**
 
-The next step was recognizing that if each CAATL had its own clock, then each operation must modify the CAATL. It was better to have a wall clock for CAATLs, which is configuration-dependent: either `P-RAL.T` for a single P-REL, or `{ [P-RAL.id]: P-RAL.T }` to always assume multiple P-RELs.
+The next step was recognising that if each CAATL had its own clock, then each operation must modify the CAATL. It was better to have a wall clock for CAATLs, which is configuration-dependent: either `P-RAL.T` for a single P-REL, or `{ [P-RAL.id]: P-RAL.T }` to always assume multiple P-RELs.
 
 This moved `T` from being a property of individual cells to being an environmental/contextual property at the P-RAL level. The clock became a vector–a dictionary mapping P-RAL IDs to their timestamps. This allowed the system to track causality across multiple P-RELs without requiring a central coordinator.
 
 **The Hybrid Wall Clock: Timestamp-Leading**
 
-But vector clocks have limitations. We needed something that could provide linearizability without the overhead of maintaining full vector state. The solution was a hybrid wall linear clock: `[Wall, Epoch, Idx]`.
+But vector clocks have limitations. We needed something that could provide linearisability without the overhead of maintaining full vector state. The solution was a hybrid wall linear clock: `[Wall, Epoch, Idx]`.
 
 This model used wall clock time as the primary component, with Epoch as a causal generation counter and Idx to disambiguate concurrent events. The local evolution rule was straightforward: if the physical clock advanced, reset Epoch and Idx; otherwise, increment Idx.
 
-The problem: this model required external synchronization. If physical clocks were skewed, the system couldn't guarantee linearizability without a central time authority. We needed a model that could work with local semantics.
+The problem: this model required external synchronisation. If physical clocks were skewed, the system couldn't guarantee linearisability without a central time authority. We needed a model that could work with local semantics.
 
 **The Refinement: Epoch-Leading**
 
@@ -367,7 +367,7 @@ The key insight: **Epoch could jump forward to handle remote causality, while Sy
 
 **The Sway Rule**
 
-When a remote pulse arrives, the system applies the "Sway Rule": if `T_remote > T_local`, then `T_local[0] = max(T_local[0], T_remote[0]) + 1`. The Epoch jumps forward to match or exceed the remote, ensuring global linearizability without requiring synchronized physical clocks.
+When a remote pulse arrives, the system applies the "Sway Rule": if `T_remote > T_local`, then `T_local[0] = max(T_local[0], T_remote[0]) + 1`. The Epoch jumps forward to match or exceed the remote, ensuring global linearisability without requiring synchronised physical clocks.
 
 This meant that even if two nodes had clocks hours apart, the system would remain linear. The Epoch would simply "carry" the causality forward, and the physical clocks would converge over time through gossip.
 
@@ -375,19 +375,19 @@ This meant that even if two nodes had clocks hours apart, the system would remai
 
 But we still wanted physical clocks to converge. The solution was to embed clock information in every transmission bundle: `[T_Sync, Clocks[], Pulse[]]`. The `Clocks` dictionary contains `{ nodeID: WallClock }` for each node seen since the last transmission.
 
-This enables NTP-style clock synchronization as an **optimization overlay**. The Clocks Op (itself a Pulse in the relations index) processes these clock dictionaries, computing skew and offset. Over time, the `SyncedWall` values across the network converge, reducing the frequency of Epoch jumps.
+This enables NTP-style clock synchronisation as an **optimisation overlay**. The Clocks Op (itself a Pulse in the relations index) processes these clock dictionaries, computing skew and offset. Over time, the `SyncedWall` values across the network converge, reducing the frequency of Epoch jumps.
 
-The crucial insight: **clock synchronization is optional**. The system works correctly even if clocks never converge–the Epoch ensures linearizability regardless. Clock sync is just an optimization that makes the system more efficient.
+The crucial insight: **clock synchronisation is optional**. The system works correctly even if clocks never converge–the Epoch ensures linearisability regardless. Clock sync is just an optimisation that makes the system more efficient.
 
 **The Default Epoch Value**
 
-The final decision was how to initialize a new P-REL. The answer: **`Epoch = UnixTime + skew`** at startup, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+The final decision was how to initialise a new P-REL. The answer: **`Epoch = UnixTime + skew`** at startup, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
 
 This provides a global coarse sync without a central server. Even if two nodes have never met, their Epochs will be roughly in the same "galaxy." If a node has previously computed clock skew (either preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch. This allows nodes that have been part of the network before to start closer to the network's current causal generation.
 
 The Sway Rule handles the rest–if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch. But using prior skew information reduces the initial jump required.
 
-This decision stabilized the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensured that even isolated nodes start in a reasonable causal space. The system becomes self-stabilizing–it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+This decision stabilised the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensured that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising–it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
 
 ---
 

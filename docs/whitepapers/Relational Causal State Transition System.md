@@ -1,16 +1,16 @@
 # Relational and Causal State Transition System (RaCSTS)
 
-**Propagator Networks as Serializable Values**
+**Propagator Networks as Serialisable Values**
 
 ---
 
 ## Abstract
 
-Consider a world where propagator networks are first-class values—pausable, serializable, and resumable like any other data structure. Where debugging a complex reactive system means loading a snapshot file, where distributed systems are simply networks that happen to span boundaries, and where composing complex behaviors means composing networks as naturally as composing functions.
+Consider a world where propagator networks are first-class values—pausable, serialisable, and resumable like any other data structure. Where debugging a complex reactive system means loading a snapshot file, where distributed systems are simply networks that happen to span boundaries, and where composing complex behaviours means composing networks as naturally as composing functions.
 
-This is not our current world. Today, propagator networks exist only as executing processes. Their topology, state, and logic cannot be serialized, transmitted, or inspected. This missing object—networks as serializable values—blocks an entire class of capabilities: time-travel debugging, network versioning, cross-boundary integration, and truly composable reactive systems.
+This is not our current world. Today, propagator networks exist only as executing processes. Their topology, state, and logic cannot be serialised, transmitted, or inspected. This missing object—networks as serialisable values—blocks an entire class of capabilities: time-travel debugging, network versioning, cross-boundary integration, and truly composable reactive systems.
 
-RaCSTS (Relational and Causal State Transition System, pronounced "Rackets") provides the specification for this missing object. By reframing propagator networks as properly basic data structures built from Causal Annotated Associative Tagged Literals (CAnATL), RaCSTS enables networks to become values you can serialize, inspect, and reason about. Suss, the reference TypeScript implementation, demonstrates that this specification is not theoretical—it is practical, implementable, and ready for production use.
+RaCSTS (Relational and Causal State Transition System, pronounced "Rackets") provides the specification for this missing object. By reframing propagator networks as properly basic data structures built from Causal Annotated Associative Tagged Literals (CAnATL), RaCSTS enables networks to become values you can serialise, inspect, and reason about. Suss, the reference TypeScript implementation, demonstrates that this specification is not theoretical—it is practical, implementable, and ready for production use.
 
 **Words:** 178
 
@@ -20,21 +20,21 @@ RaCSTS (Relational and Causal State Transition System, pronounced "Rackets") pro
 
 **Who this is for:**
 
-This white paper is written for developers building reactive systems, state management solutions, or distributed applications, and for researchers interested in propagator networks and serializable computation models.
+This white paper is written for developers building reactive systems, state management solutions, or distributed applications, and for researchers interested in propagator networks and serialisable computation models.
 
 **Assumed knowledge:**
 
-Familiarity with reactive programming (React, RxJS, MobX), state management patterns (Redux, Zustand), and basic understanding of serialization and data flow architectures.
+Familiarity with reactive programming (React, RxJS, MobX), state management patterns (Redux, Zustand), and basic understanding of serialisation and data flow architectures.
 
 **What is delivered:**
 
-- **RaCSTS Specification** (§6): A formal definition of propagator networks as serializable values, grounded in State Transition Systems [15] (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
-- **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serializability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-REL serialization (§7.2).
+- **RaCSTS Specification** (§6): A formal definition of propagator networks as serialisable values, grounded in State Transition Systems [15] (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
+- **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serialisability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-REL serialisation (§7.2).
 - **Suss Toolkit** (§8): Reference TypeScript implementation demonstrating practical application. Includes performance analysis (§8.4) and usage patterns (§8.5).
 
 **What is not delivered:**
 
-RaCSTS is not a UI framework, database system, or network transport protocol. It does not prescribe domain-specific solutions or replace existing persistence layers. It is a computational model and toolkit for building serializable propagator networks.
+RaCSTS is not a UI framework, database system, or network transport protocol. It does not prescribe domain-specific solutions or replace existing persistence layers. It is a computational model and toolkit for building serialisable propagator networks.
 
 **Words:** 147
 
@@ -44,19 +44,19 @@ RaCSTS is not a UI framework, database system, or network transport protocol. It
 
 ### 1.0 A Day in This World
 
-You open a bug report. Instead of log statements and stack traces, there's a P-REL snapshot file attached—a complete serialization of the network state at the moment of failure. You load it into your local environment and it resumes instantly: same topology, same values, same causal history. You step backward through time, watching the propagation ripple in reverse. The problematic constraint reveals itself. You fix the relation, serialize the corrected network, and send it back. The entire debugging session took minutes, not hours.
+You open a bug report. Instead of log statements and stack traces, there's a P-REL snapshot file attached—a complete serialisation of the network state at the moment of failure. You load it into your local environment and it resumes instantly: same topology, same values, same causal history. You step backward through time, watching the propagation ripple in reverse. The problematic constraint reveals itself. You fix the relation, serialise the corrected network, and send it back. The entire debugging session took minutes, not hours.
 
 This isn't science fiction. This is the world that becomes possible when networks are values.
 
 ### 1.1 The Vision
 
-In this world, propagator networks are first-class values. You serialize them, version them in Git, compose them like functions, and transmit them across boundaries as naturally as you pass JSON. Time-travel debugging isn't a framework feature—it's a consequence of serializability. Distributed systems aren't special-case architecture—they're just networks that happen to span process boundaries. Network composition isn't integration hell—it's functional composition.
+In this world, propagator networks are first-class values. You serialise them, version them in Git, compose them like functions, and transmit them across boundaries as naturally as you pass JSON. Time-travel debugging isn't a framework feature—it's a consequence of serialisability. Distributed systems aren't special-case architecture—they're just networks that happen to span process boundaries. Network composition isn't integration hell—it's functional composition.
 
 The transformation is fundamental: from infrastructure you configure to data you manipulate. From opaque runtime state to inspectable values. From isolated systems to composable networks. What stops existing are entire classes of coordination tooling, debugging frameworks, and integration middleware. They simply become unnecessary when networks are values.
 
 ### 1.2 The Hook
 
-What if propagator networks were values you could serialize, inspect, and reason about? What if you could pause any computation, save its complete state, and resume it anywhere? What if distributed systems were just networks that happen to span boundaries, with no special-case infrastructure?
+What if propagator networks were values you could serialise, inspect, and reason about? What if you could pause any computation, save its complete state, and resume it anywhere? What if distributed systems were just networks that happen to span boundaries, with no special-case infrastructure?
 
 This is the promise RaCSTS delivers.
 
@@ -84,7 +84,7 @@ But certain patterns remain difficult, and the difficulty is not accidental—it
 
 **Complex dependency chains:** When A depends on B, B depends on C, and C depends on A, most reactive frameworks struggle. Cycles are treated as pathological cases, not first-class concerns.
 
-**Incremental computation:** Avoiding redundant work when only part of an input changes requires manual optimization. Most frameworks either recompute everything or require explicit dependency tracking.
+**Incremental computation:** Avoiding redundant work when only part of an input changes requires manual optimisation. Most frameworks either recompute everything or require explicit dependency tracking.
 
 **Cascading updates:** Predicting what updates when something changes is difficult. The causality is implicit in code structure, not explicit in data.
 
@@ -96,15 +96,15 @@ But certain patterns remain difficult, and the difficulty is not accidental—it
 
 ### 2.4 Why Today's Approaches Plateau
 
-These difficulties are not bugs to be fixed—they are trade-offs baked into current models. Mainstream reactive systems optimize for simple, tree-structured data flow. They treat bidirectionality, cycles, and causal transparency as edge cases.
+These difficulties are not bugs to be fixed—they are trade-offs baked into current models. Mainstream reactive systems optimise for simple, tree-structured data flow. They treat bidirectionality, cycles, and causal transparency as edge cases.
 
-But the real limitation is deeper: **Most mainstream reactive systems lack a serializable intermediate representation of causality and reconciliation.** Without this representation, debugging remains opaque and composition remains integration. You can't inspect what doesn't exist as data.
+But the real limitation is deeper: **Most mainstream reactive systems lack a serialisable intermediate representation of causality and reconciliation.** Without this representation, debugging remains opaque and composition remains integration. You can't inspect what doesn't exist as data.
 
-Consider the implications: When your reactive system has no serializable representation, you cannot pause and resume it. You cannot version it. You cannot transmit it. You cannot diff it. You cannot compose it cleanly. Every advanced capability depends on the missing object—the network as a value.
+Consider the implications: When your reactive system has no serialisable representation, you cannot pause and resume it. You cannot version it. You cannot transmit it. You cannot diff it. You cannot compose it cleanly. Every advanced capability depends on the missing object—the network as a value.
 
 This is not a tooling problem that better debuggers will solve. This is a model problem. The runtime exists, but the artifact does not. Incremental improvement within current models cannot overcome this limitation because the limitation is the absence of a properly basic data structure for the computation itself.
 
-**Falsifiable claim:** If a reactive system cannot serialize its complete state (topology, values, and causal history) into a format that deterministically reproduces that state upon deserialization, then time-travel debugging, network versioning, and compositional reuse of that system require external, framework-specific infrastructure. RaCSTS proposes that this infrastructure becomes unnecessary when networks are properly basic serializable values.
+**Falsifiable claim:** If a reactive system cannot serialise its complete state (topology, values, and causal history) into a format that deterministically reproduces that state upon deserialisation, then time-travel debugging, network versioning, and compositional reuse of that system require external, framework-specific infrastructure. RaCSTS proposes that this infrastructure becomes unnecessary when networks are properly basic serialisable values.
 
 **Section Total: ~500 words**
 
@@ -136,7 +136,7 @@ Constraints can be bidirectional. If you declare A = B + C, changing A can propa
 
 But propagator networks, as traditionally conceived, hit a wall:
 
-**Serialization:** You cannot pause, save, or resume network state. The network exists only as an executing process.
+**Serialisation:** You cannot pause, save, or resume network state. The network exists only as an executing process.
 
 **Debugging propagation:** Tracing why a value changed requires instrumentation. The causal history is not part of the data.
 
@@ -144,9 +144,9 @@ But propagator networks, as traditionally conceived, hit a wall:
 
 **Integration across boundaries:** Moving networks between systems (browser to server, process to process) requires rebuilding the network from scratch.
 
-**Testing network behavior:** Capturing network state for test assertions is ad-hoc. You test the outputs, not the network itself.
+**Testing network behaviour:** Capturing network state for test assertions is ad-hoc. You test the outputs, not the network itself.
 
-**Version control for networks:** You cannot serialize network state to track changes over time. Git works on code, not running systems.
+**Version control for networks:** You cannot serialise network state to track changes over time. Git works on code, not running systems.
 
 **Composing networks:** Combining or nesting networks is manual integration. There's no compositional semantics.
 
@@ -156,7 +156,7 @@ But propagator networks, as traditionally conceived, hit a wall:
 
 Propagator networks solve the structural problems of reactive programming—they make bidirectionality, cycles, and incrementality natural. But they create new problems: the network cannot be treated as a value. It exists only as infrastructure.
 
-This is the cliff: **We are stuck unless something new exists—networks as serializable values.**
+This is the cliff: **We are stuck unless something new exists—networks as serialisable values.**
 
 ### 3.5 Runtime ≠ Artifact
 
@@ -170,14 +170,14 @@ The need is clear: We need networks as values, not just networks as processes.
 
 ---
 
-## 4. The Missing Object: Networks as Serializable Values
+## 4. The Missing Object: Networks as Serialisable Values
 
 ### 4.0 Requirements for Networks-as-Values
 
-For a propagator network to be a serializable value, it must satisfy three layers of requirements:
+For a propagator network to be a serialisable value, it must satisfy three layers of requirements:
 
 **Representation:**
-- Must serialize without external runtime state
+- Must serialise without external runtime state
 - Must round-trip deterministically (pack and unpack must be inverses)
 
 **Observability:**
@@ -185,45 +185,45 @@ For a propagator network to be a serializable value, it must satisfy three layer
 - Must support diffing (compare two network states meaningfully)
 
 **Execution Coupling:**
-- Must separate blueprint (serializable) from execution environment (provided at runtime)
-- Must preserve causal ordering and reconciliation semantics across serialization boundaries
+- Must separate blueprint (serialisable) from execution environment (provided at runtime)
+- Must preserve causal ordering and reconciliation semantics across serialisation boundaries
 - Must compose recursively (networks can contain networks) without special cases
 
-These requirements are not satisfied by adding serialization to existing propagator implementations. They require rethinking the fundamental data structure of the network itself.
+These requirements are not satisfied by adding serialisation to existing propagator implementations. They require rethinking the fundamental data structure of the network itself.
 
 ### 4.1 The Core Insight
 
 The insight that enables networks as values is deceptively simple: **The network is the data.**
 
-Not the network produces data. Not the network contains data. The network—its topology, its state, its propagation rules, its causal history—*is* a serializable data structure.
+Not the network produces data. Not the network contains data. The network—its topology, its state, its propagation rules, its causal history—*is* a serialisable data structure.
 
 This requires three conceptual shifts:
 
-**Cells as Interpretation VMs:** Each cell is not merely a container for a value. It is a virtual machine that processes a sequence of operations (Pulses) through an interpretation function to produce a materialized value. The interpretation is the "microcode" of the cell.
+**Cells as Interpretation VMs:** Each cell is not merely a container for a value. It is a virtual machine that processes a sequence of operations (Pulses) through an interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell.
 
-**P-REL as Blueprint:** The network topology, links, and causal markers exist as a serializable structure called P-REL (Parallel Relational Layer). The P-REL contains everything needed to resume the network, but it contains no executable logic—only references to logic.
+**P-REL as Blueprint:** The network topology, links, and causal markers exist as a serialisable structure called P-REL (Parallel Relational Layer). The P-REL contains everything needed to resume the network, but it contains no executable logic—only references to logic.
 
 **Separation of Blueprint and Runtime:** Nodes and relations are opaque within the P-REL. They exist only as identifiers. At runtime, a Node Resolver and Relation Resolver provide the actual implementations. This separation is what enables portability.
 
 ### 4.2 What This Makes Possible
 
-When networks become serializable values, entire classes of capabilities emerge:
+When networks become serialisable values, entire classes of capabilities emerge:
 
-✅ **Serialization:** Networks can be paused, serialized to JSON or other formats, and resumed deterministically. (Mechanism: §7.3 Serialization Format; Example: §8.5 "Serialization")
+✅ **Serialisation:** Networks can be paused, serialised to JSON or other formats, and resumed deterministically. (Mechanism: §7.3 Serialisation Format; Example: §8.5 "Serialisation")
 
-✅ **Debugging propagation:** Serialize network state at any point to trace changes. Time-travel debugging becomes natural. (Mechanism: §6.6 Serializable Consistency; Example: §8.5 "Snapshot Files")
+✅ **Debugging propagation:** Serialise network state at any point to trace changes. Time-travel debugging becomes natural. (Mechanism: §6.6 Serialisable Consistency; Example: §8.5 "Snapshot Files")
 
 ✅ **Reasoning about network state:** The network state is a value you can inspect with standard tools. (Mechanism: §6.4 Model Entities; Example: Appendix C)
 
 ✅ **Integration across boundaries:** Networks are values that work anywhere: browser, server, mobile, embedded. (Mechanism: §7.1 Architecture Overview; Example: §8.5)
 
-✅ **Testing network behavior:** Capture and replay network state for reproducible tests. (Mechanism: §6.6 Serializable Consistency; Example: §8.5)
+✅ **Testing network behaviour:** Capture and replay network state for reproducible tests. (Mechanism: §6.6 Serialisable Consistency; Example: §8.5)
 
-✅ **Version control for networks:** Serialize network state to track changes over time. Git becomes your network history. (Mechanism: §4.0 Requirements (Observability); Example: §9.4)
+✅ **Version control for networks:** Serialise network state to track changes over time. Git becomes your network history. (Mechanism: §4.0 Requirements (Observability); Example: §9.4)
 
 ✅ **Composing networks:** Networks can contain networks (meta-circularity). Composition is structural, not nominal. (Mechanism: §6.6 Meta-Circularity; Example: §8.5 "Complex Dependencies")
 
-✅ **Scaling networks:** Split networks across boundaries because they're serializable. Distributed systems become data structure operations. (Mechanism: §6.6 Scale Invariance; Example: §8.5)
+✅ **Scaling networks:** Split networks across boundaries because they're serialisable. Distributed systems become data structure operations. (Mechanism: §6.6 Scale Invariance; Example: §8.5)
 
 ### 4.3 The Transformation
 
@@ -237,7 +237,7 @@ This transforms the nature of reactive programming:
 
 **From local to universal:** Networks work across any boundary because they are data, not infrastructure.
 
-This is what RaCSTS provides: a specification for networks as serializable values.
+This is what RaCSTS provides: a specification for networks as serialisable values.
 
 **Section Total: ~620 words**
 
@@ -247,35 +247,35 @@ This is what RaCSTS provides: a specification for networks as serializable value
 
 ### 5.1 Network Composition
 
-**If networks are serializable values, then** building systems by composing networks becomes trivial. A complex application is just a composition of smaller, reusable network primitives.
+**If networks are serialisable values, then** building systems by composing networks becomes trivial. A complex application is just a composition of smaller, reusable network primitives.
 
-**If networks are serializable values, then** reusable network patterns become network libraries. The NPM ecosystem expands to include not just code libraries, but network libraries.
+**If networks are serialisable values, then** reusable network patterns become network libraries. The NPM ecosystem expands to include not just code libraries, but network libraries.
 
-**If networks are serializable values, then** network marketplaces become possible. Share, buy, and sell pre-built propagator networks for common problems.
+**If networks are serialisable values, then** network marketplaces become possible. Share, buy, and sell pre-built propagator networks for common problems.
 
 ### 5.2 Cross-Boundary Integration
 
-**If networks are serializable values, then** networks work seamlessly across systems, languages, and platforms. The same network runs in the browser, on the server, or on mobile without rewriting.
+**If networks are serialisable values, then** networks work seamlessly across systems, languages, and platforms. The same network runs in the browser, on the server, or on mobile without rewriting.
 
-**If networks are serializable values, then** network migration between systems becomes trivial. Move computation to where it makes sense—edge, server, or client—by transmitting the network as data.
+**If networks are serialisable values, then** network migration between systems becomes trivial. Move computation to where it makes sense—edge, server, or client—by transmitting the network as data.
 
-**If networks are serializable values, then** distributed systems are just networks that span boundaries. No special-case infrastructure needed—distribution becomes a deployment concern, not an architectural constraint.
+**If networks are serialisable values, then** distributed systems are just networks that span boundaries. No special-case infrastructure needed—distribution becomes a deployment concern, not an architectural constraint.
 
 ### 5.3 Time-Travel and Versioning
 
-**If networks are serializable values, then** time-travel debugging becomes a natural capability. Serialize network state at any point, step backward and forward through time, replay from any state.
+**If networks are serialisable values, then** time-travel debugging becomes a natural capability. Serialise network state at any point, step backward and forward through time, replay from any state.
 
-**If networks are serializable values, then** network versioning becomes possible. Track and diff network structures over time using standard version control tools.
+**If networks are serialisable values, then** network versioning becomes possible. Track and diff network structures over time using standard version control tools.
 
-**If networks are serializable values, then** networks can become the database. The boundary between "application state" and "persistent state" collapses when networks are durable values.
+**If networks are serialisable values, then** networks can become the database. The boundary between "application state" and "persistent state" collapses when networks are durable values.
 
 ### 5.4 New Capabilities
 
-**If networks are serializable values, then** multiple developers can work on the same network simultaneously. Network state is just data—merge conflicts become data merge conflicts.
+**If networks are serialisable values, then** multiple developers can work on the same network simultaneously. Network state is just data—merge conflicts become data merge conflicts.
 
-**If networks are serializable values, then** network analysis becomes possible. Inspect network topology, identify bottlenecks, optimize structure—all using standard data analysis tools.
+**If networks are serialisable values, then** network analysis becomes possible. Inspect network topology, identify bottlenecks, optimise structure—all using standard data analysis tools.
 
-**If networks are serializable values, then** network optimization becomes a compiler problem. Analyze the network structure, apply optimization passes, emit an optimized network—all at build time.
+**If networks are serialisable values, then** network optimisation becomes a compiler problem. Analyze the network structure, apply optimisation passes, emit an optimised network—all at build time.
 
 **Section Total: ~350 words**
 
@@ -285,25 +285,25 @@ This is what RaCSTS provides: a specification for networks as serializable value
 
 ### 6.1 Formal Definition
 
-**RaCSTS** (Relational and Causal State Transition System, pronounced "Rackets") is a specification for serializable propagator networks as properly basic data structures, grounded in State Transition Systems theory [15].
+**RaCSTS** (Relational and Causal State Transition System, pronounced "Rackets") is a specification for serialisable propagator networks as properly basic data structures, grounded in State Transition Systems theory [15].
 
 RaCSTS is defined by three pillars:
 
-**P-REL (Parallel Relational Layer):** The serializable blueprint containing nodes, relations, links (array), meta, and asOf (T). P-REL is independent of RaCSTS and is a sparse encoding—not a direct conversion of entire user objects. Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serializable; literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations. P-REL is passive—it contains no executable logic, only references to logic.
+**P-REL (Parallel Relational Layer):** The serialisable blueprint containing nodes, relations, links (array), meta, and asOf (T). P-REL is independent of RaCSTS and is a sparse encoding—not a direct conversion of entire user objects. Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. P-REL is passive—it contains no executable logic, only references to logic.
 
 **Node Resolver:** A function `fn(nodeId, P-REL) -> RealNode` that resolves opaque node identifiers in P-REL to concrete node implementations with a standard interface.
 
 **Relation Resolver:** A function `fn(relationId, P-REL) -> RealRelation` that resolves opaque relation identifiers in P-REL to concrete relation functions with the signature `fn(src, tgt, meta) -> [srcV, tgtV, meta']`.
 
-This three-pillar architecture achieves complete separation of concerns: P-REL is pure data (serializable), while resolvers provide environment-specific implementations (runtime).
+This three-pillar architecture achieves complete separation of concerns: P-REL is pure data (serialisable), while resolvers provide environment-specific implementations (runtime).
 
 ### 6.2 The Type Hierarchy: Properly Basic Data Structures
 
-RaCSTS builds networks from properly basic types, ensuring serializability at every level:
+RaCSTS builds networks from properly basic types, ensuring serialisability at every level:
 
 **Type Hierarchy (Nested Structure):**
 
-The type system follows a nested "Russian Doll" pattern, where each layer adds structure while preserving serializability:
+The type system follows a nested "Russian Doll" pattern, where each layer adds structure while preserving serialisability:
 
 ```
 CAnATL [T, Tag, Value, Meta?]
@@ -311,22 +311,22 @@ CAnATL [T, Tag, Value, Meta?]
       ├─ AnATL [Dictionary<ATL>, Annotations>], Annotations]
       │   └─ ATL = Dictionary<ATL | TL | TL[]>
       │       └─ TL = [Tag, Literal]
-      │           └─ Literal = any serializable value
+      │           └─ Literal = any serialisable value
       └─ AnTL [Tag, Literal, Annotations]
           ├─ Tag = string
-          ├─ Literal = any serializable value
+          ├─ Literal = any serialisable value
           └─ Annotations = ATL
 ```
 
-Each layer wraps the previous, adding semantic structure (tags, annotations, causality) without breaking serializability. This nesting enables meta-circularity: a CAnATL's Value can itself be an AnATL containing a network structure.
+Each layer wraps the previous, adding semantic structure (tags, annotations, causality) without breaking serialisability. This nesting enables meta-circularity: a CAnATL's Value can itself be an AnATL containing a network structure.
 
 #### Base Types
 
-**Literal:** `Unknown` — The base type for all values. Any serializable JavaScript value.
+**Literal:** `Unknown` — The base type for all values. Any serialisable JavaScript value.
 
 **Tag:** A semantic label for a value, used implicitly for type discrimination and protocol dispatch.
 
-**T:** A logical timestamp for causal ordering. Structure: `[Epoch, SyncedWall, Idx]` where Epoch is a logical counter, SyncedWall is NTP-synchronized wall time [9], and Idx disambiguates concurrent events. The Idx component uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearizable [6] even outside individual P-RELs. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components.
+**T:** A logical timestamp for causal ordering. Structure: `[Epoch, SyncedWall, Idx]` where Epoch is a logical counter, SyncedWall is NTP-synchronised wall time [9], and Idx disambiguates concurrent events. The Idx component uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RELs. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components.
 
 #### Core Types
 
@@ -344,15 +344,15 @@ Each layer wraps the previous, adding semantic structure (tags, annotations, cau
 
 #### Value Types
 
-**Value:** `AnATL | AnTL` — Union of annotated types. This is the type of "a value" in the system—any serializable data with optional semantic tags and annotations.
+**Value:** `AnATL | AnTL` — Union of annotated types. This is the type of "a value" in the system—any serialisable data with optional semantic tags and annotations.
 
 #### Causal Types
 
 **CAnATL (CausalAnnotatedAssociativeTaggedLiteral):** `[T, Tag, Value, Meta?]` — The fundamental cell type in RaCSTS. Contains:
 - **T:** Logical timestamp for causal ordering
 - **Tag:** Semantic label for the cell's interpretation
-- **Value:** The current authoritative state (materialized through interpretation)
-- **Meta:** Optional metadata (no preservation guarantees through serialization)
+- **Value:** The current authoritative state (materialised through interpretation)
+- **Meta:** Optional metadata (no preservation guarantees through serialisation)
 
 CAnATL is the properly basic data structure for a cell. Everything in a propagator network is ultimately built from CAnATLs. Cells contain only authoritative state—there is no node-level history, window, frame, or context. Any operation that requires prior knowledge must reify that requirement explicitly in the Pulse. Any relation that requires smoothing, debouncing, or temporal context maintains its own private, non-authoritative state.
 
@@ -362,7 +362,7 @@ CAnATL is the properly basic data structure for a cell. Everything in a propagat
 
 **Type Safety:** Each level of the hierarchy adds structure: tagging provides semantic identity, annotations provide context, causality provides temporal ordering. The type system enforces these invariants.
 
-**Serializability:** All types are properly basic—they contain only serializable data. No functions, no proxies, no live references. A CAnATL serializes as `[T, Tag, Value, Meta?]` where Value is the current authoritative state, and Values are ultimately built from primitive JavaScript types.
+**Serialisability:** All types are properly basic—they contain only serialisable data. No functions, no proxies, no live references. A CAnATL serialises as `[T, Tag, Value, Meta?]` where Value is the current authoritative state, and Values are ultimately built from primitive JavaScript types.
 
 **No Node-Level History:** Cells contain only authoritative state. There is no node-level history, window, frame, or context. Causality lives exclusively in T. Any operation that requires prior knowledge must reify that requirement explicitly in the Pulse. Relations that require temporal context (smoothing, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cell.
 
@@ -382,13 +382,13 @@ To bridge the formal type hierarchy with operational semantics, we define the en
 
 **Link Relation:** Internal propagation logic between cells. Signature: `link(src, tgt, meta) -> [srcV, tgtV, meta']`. Link Relations maintain relationships between cells—they are the "constraints" or "physics" of the network.
 
-**From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serializing data; you are serializing a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value—the propagation policy is part of the data structure itself, not a runtime behavior.
+**From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value—the propagation policy is part of the data structure itself, not a runtime behaviour.
 
-**Change Set:** A collection of operations applied to cells. Used by toolkit primitives for adding operations, collapsing redundant operations, materializing values, and computing constraint alignments. Change Sets batch operations for efficient application.
+**Change Set:** A collection of operations applied to cells. Used by toolkit primitives for adding operations, collapsing redundant operations, materialising values, and computing constraint alignments. Change Sets batch operations for efficient application.
 
-**Interpretation:** A function that projects a CAnATL to a materialized Value. Signature: `interpretation(CAnATL) -> Value`. The interpretation defines how a cell's CAnATL structure becomes a concrete value. Each cell is an "Interpretation VM"—it processes operations through its interpretation to produce its current value.
+**Interpretation:** A function that projects a CAnATL to a materialised Value. Signature: `interpretation(CAnATL) -> Value`. The interpretation defines how a cell's CAnATL structure becomes a concrete value. Each cell is an "Interpretation VM"—it processes operations through its interpretation to produce its current value.
 
-**The Interpretation VM Metaphor:** This is more than a metaphor. Each cell truly is a virtual machine that processes a sequence of Pulses through its interpretation function to produce a materialized value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value—it stores the operations (the CAnATL), and the interpretation projects those operations into a value. This separation—between the stored operations (the CAnATL) and the interpretation (the VM)—is what makes cells serializable. The operations are data. The interpretation is provided at runtime. This is why a network can be serialized and resumed anywhere: the operations are portable, and the interpretation can be provided by any host.
+**The Interpretation VM Metaphor:** This is more than a metaphor. Each cell truly is a virtual machine that processes a sequence of Pulses through its interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value—it stores the operations (the CAnATL), and the interpretation projects those operations into a value. This separation—between the stored operations (the CAnATL) and the interpretation (the VM)—is what makes cells serialisable. The operations are data. The interpretation is provided at runtime. This is why a network can be serialised and resumed anywhere: the operations are portable, and the interpretation can be provided by any host.
 
 **Quiescence:** A state where no further propagation occurs. Detected when a full propagation round produces no accepted operations—all cells have stable state (no T advances). Quiescence is the "solution" to the constraint network.
 
@@ -417,14 +417,14 @@ This single construct is both the event (what was observed) and the operation (w
 
 **Acceptance Logic:**
 1. Resolve Path to the target cell
-2. Materialize the cell to its current value Cur (through interpretation)
+2. Materialise the cell to its current value Cur (through interpretation)
 3. Accept iff Cur == Old, advancing T and applying New
 4. Reject otherwise, triggering an amnesiac event (lineage becomes `stale`) or refinement (e.g., Sync)
 
 This eliminates the need for any node-level sequence of past values. What was previously called a "window" was doing two unrelated jobs (CAS support and relation enhancement) and belonged in neither the core state nor the cell model.
 
 **Result:**
-- State is minimal and serializable
+- State is minimal and serialisable
 - Causality lives exclusively in T
 - CAS semantics are explicit and auditable
 - No structure resembles history unless the model explicitly defines one
@@ -466,7 +466,7 @@ Link Relations operate on pairs of cells. They:
 - Compute new **values** that satisfy the relationship
 - Return values (not nodes) and updated metadata
 
-**The Departure from Automatic Propagation:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value—the propagation policy is part of the data structure itself, not a runtime behavior.
+**The Departure from Automatic Propagation:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value—the propagation policy is part of the data structure itself, not a runtime behaviour.
 
 The relation sees the full context of each node—value, state, meta, and asOf—but returns only the values. The system then uses these returned values to update the nodes, marking them as derived if the value changed. Relations that require temporal context (trend detection, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cells.
 
@@ -496,7 +496,7 @@ RaCSTS defines six standard higher-order relations that provide common propagati
 **map (Functional Bridge):**
 - Takes three functions: forward (src → tgt), backward (tgt → src), and conflict resolver
 - Handles cases where both nodes change in the same time-step
-- Use case: Serializing complex objects to strings, mapping UI state to domain state
+- Use case: Serialising complex objects to strings, mapping UI state to domain state
 
 **constrain (Bidirectional Solver):**
 - Enforces multi-variable constraints (e.g., Balance = Credits - Debits)
@@ -522,11 +522,11 @@ RaCSTS defines six standard higher-order relations that provide common propagati
 - Triggered when any source node in the collection is updated
 - Enables reduce and join to operate over sets of nodes
 
-These standard relations make the P-REL predictable and analyzable—a host receiving a value knows exactly what a `linear` or `reduce` link does without inspecting code, enabling potential hardware-level or optimized runtime execution.
+These standard relations make the P-REL predictable and analysable—a host receiving a value knows exactly what a `linear` or `reduce` link does without inspecting code, enabling potential hardware-level or optimised runtime execution.
 
 **Link Relation Return Patterns:**
 
-A relation's behavior is defined by what it returns—the "repair" it suggests to bring cells into alignment. The relation receives full nodes but returns values:
+A relation's behaviour is defined by what it returns—the "repair" it suggests to bring cells into alignment. The relation receives full nodes but returns values:
 
 1. **Fixed Point (No Change):** `[old-src-value, old-tgt-value, old-meta]`
    - The relation is satisfied—cells are already in alignment
@@ -644,11 +644,11 @@ Monotonicity is locally checkable at each cell. No global coordination is requir
 **Quiescence Detection:**
 A quiescent state is reached when a full propagation round produces no accepted operations. All cells reject further operations because no operation can advance their timestamps further. This is the "solution" state of the constraint network.
 
-#### Serializable Consistency
+#### Serialisable Consistency
 
 **Operational Definition:**
-- **Pack operation:** Serialize P-REL (all CAnATL structures, topology, links) to a format (JSON, MessagePack, etc.)
-- **Unpack operation:** Deserialize format back to P-REL with identical structure
+- **Pack operation:** Serialise P-REL (all CAnATL structures, topology, links) to a format (JSON, MessagePack, etc.)
+- **Unpack operation:** Deserialise format back to P-REL with identical structure
 - **Invariant:** `unpack(pack(P-REL)) === P-REL` (deterministic round-trip)
 
 **Preservation Requirements:**
@@ -658,16 +658,16 @@ A quiescent state is reached when a full propagation round produces no accepted 
 - Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically
 
 **Metadata Guarantees:**
-- Metadata has zero guarantees regarding preservation during serialization cycles
+- Metadata has zero guarantees regarding preservation during serialisation cycles
 - Implementations may discard, modify, or ignore metadata
-- Metadata can be used for optimization (e.g., caching serialized representations) but must not be relied upon for correctness
+- Metadata can be used for optimisation (e.g., caching serialised representations) but must not be relied upon for correctness
 
-Pack and unpack are inverses for the core P-REL structure. A serialized network, when deserialized, is indistinguishable from the original in terms of nodes, links, relations, meta, and asOf. Metadata may differ.
+Pack and unpack are inverses for the core P-REL structure. A serialised network, when deserialised, is indistinguishable from the original in terms of nodes, links, relations, meta, and asOf. Metadata may differ.
 
 #### Scale Invariance
 
 **Operational Definition:**
-The same core operations (adding operations to change sets, collapsing redundant operations, materializing values through interpretation, computing constraint alignments) operate identically at:
+The same core operations (adding operations to change sets, collapsing redundant operations, materialising values through interpretation, computing constraint alignments) operate identically at:
 - **Subnetwork level:** A single CAnATL cell or small network
 - **Whole-network level:** A network containing many CAnATL cells
 - **Meta-network level:** A network whose Values are themselves networks
@@ -679,11 +679,11 @@ The same code handles all scales. A function that operates on a cell operates id
 
 **Operational Definition:**
 - A CAnATL cell's Value (the current authoritative state) can be an AnATL containing a network structure
-- When materializing such a CAnATL, the interpretation produces a network
-- That network can be operated on using the same core operations (adding operations, collapsing redundant operations, materializing values, computing constraint alignments)
+- When materialising such a CAnATL, the interpretation produces a network
+- That network can be operated on using the same core operations (adding operations, collapsing redundant operations, materialising values, computing constraint alignments)
 - No special handling required: networks containing networks is a natural case of the recursive type structure
 
-**Example:** Cell A contains a simple literal value (42). Cell B contains an entire network as its value. When materialized through their respective interpretations, Cell A produces the number 42, Cell B produces a resumable network structure. Both cells are processed identically by the propagation mechanics—the interpretation determines what the CAnATL "means," not the propagation system.
+**Example:** Cell A contains a simple literal value (42). Cell B contains an entire network as its value. When materialised through their respective interpretations, Cell A produces the number 42, Cell B produces a resumable network structure. Both cells are processed identically by the propagation mechanics—the interpretation determines what the CAnATL "means," not the propagation system.
 
 Meta-circularity is not a feature—it's a consequence of properly basic recursive types.
 
@@ -697,15 +697,15 @@ Meta-circularity is not a feature—it's a consequence of properly basic recursi
 
 ### 7.1 Architecture Overview
 
-RaCSTS achieves serializability through strict separation of concerns:
+RaCSTS achieves serialisability through strict separation of concerns:
 
 **Blueprint (P-REL) vs. Runtime (Resolvers):** P-REL is independent of RaCSTS and contains nodes, links, relations, meta, and T. It contains only data—no executable code. At runtime, Node Resolvers and Relation Resolvers provide the implementations referenced by identifiers.
 
 **Opaque Design:** Both nodes and relations are opaque within the P-REL. P-REL stores node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). Relations are implementation-dependent structures. This opacity is what enables portability—the same P-REL can work with different resolver implementations in different environments.
 
-**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serializable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
+**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
 
-**Serialization Boundary:** The serialization boundary is precisely the P-REL structure (nodes, links, relations, meta, asOf). Literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations. Only the P-REL structure itself is guaranteed serializable. Everything outside the P-REL (resolvers, runtime state) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
+**Serialisation Boundary:** The serialisation boundary is precisely the P-REL structure (nodes, links, relations, meta, asOf). Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. Only the P-REL structure itself is guaranteed serialisable. Everything outside the P-REL (resolvers, runtime state) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
 
 ### 7.2 The Toolkit Primitives
 
@@ -725,7 +725,7 @@ This is the memory management operation of the system, reducing the size of chan
 
 #### Execution Engine
 
-Projects a CAnATL through an interpretation function to materialize a Value. The interpretation is the "microcode" of the cell—it defines how the CAnATL structure becomes a concrete value.
+Projects a CAnATL through an interpretation function to materialise a Value. The interpretation is the "microcode" of the cell—it defines how the CAnATL structure becomes a concrete value.
 
 This is the fundamental way to observe the state of the system.
 
@@ -750,9 +750,9 @@ The P-REL must contain:
 - **Meta:** P-REL-level metadata (ATL)
 - **asOf:** Current logical timestamp (T) for the P-REL
 
-**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's state may be WeakRefs (not serializable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serializable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
+**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
 
-Everything in the P-REL must be serializable to JSON or equivalent.
+Everything in the P-REL must be serialisable to JSON or equivalent.
 
 #### Link Selector Syntax
 
@@ -814,13 +814,13 @@ Template links use pattern-based selectors to define propagation rules for entir
 - **Dynamic discovery:** As network grows (new nodes added), templates automatically apply
 
 **Benefits:**
-- **Compact representation:** One template link governs many nodes without serializing individual links
-- **Schema of propagation:** Serialize propagation rules, not instance connections
-- **Self-organizing:** Network structure resolves dynamically as values change
+- **Compact representation:** One template link governs many nodes without serialising individual links
+- **Schema of propagation:** Serialise propagation rules, not instance connections
+- **Self-organising:** Network structure resolves dynamically as values change
 
 **Common Template Patterns:**
 
-| Pattern | Template Link | Behavior |
+| Pattern | Template Link | Behaviour |
 |---------|---------------|----------|
 | **Collector (N→1)** | `[node:item:*, node:total-summary, reduce, args, meta, "accumulator"]` | Any node with `item:*` prefix automatically piped into `total-summary` |
 | **Shadow (1→1 Map)** | `[node:real:*, node:shadow:{{id}}, map, args, meta, "mirror"]` | `{{id}}` variable creates counterpart shadow node dynamically |
@@ -851,7 +851,7 @@ A RealNode (returned by Node Resolver) must provide:
 - **meta:** Metadata (ATL)
 - **asOf:** Timestamp (T) of last update
 
-Nodes in P-REL are `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). In RaCSTS, the value is opaque. In Suss, the value is ATL. P-REL is a sparse encoding—not a direct conversion of entire user objects. Much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque; only the P-REL structure is guaranteed serializable.
+Nodes in P-REL are `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). In RaCSTS, the value is opaque. In Suss, the value is ATL. P-REL is a sparse encoding—not a direct conversion of entire user objects. Much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque; only the P-REL structure is guaranteed serialisable.
 
 The Node interface is the contract between the system and node implementations.
 
@@ -867,15 +867,15 @@ A RealRelation (returned by Relation Resolver) must provide:
 
 The Relation interface is the contract for propagation logic.
 
-#### Serialization Format
+#### Serialisation Format
 
 Pack and unpack operations must:
-- **Serialize CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, SyncedWall, Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
-- **Serialize Values:** Values are `AnATL | AnTL`, which serialize as nested JavaScript structures
+- **Serialise CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, SyncedWall, Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
+- **Serialise Values:** Values are `AnATL | AnTL`, which serialise as nested JavaScript structures
 - **Preserve Structure:** Recursive ATL structure must round-trip perfectly
 - **Deterministic:** Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically. Metadata has zero guarantees and may differ.
 
-Serialization is not an afterthought—it is the fundamental capability of the system.
+Serialisation is not an afterthought—it is the fundamental capability of the system.
 
 ### 7.4 Operational Semantics
 
@@ -900,10 +900,10 @@ When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELT
 RECV pulses are logged and/or transmitted as change messages. This is the gossip layer—RECV becomes the message format. The system merges inbound DELTA with outbound data for naive gossip, ensuring information diffuses through the network. This layer handles the actual transmission, whether across process boundaries, network boundaries, or storage boundaries.
 
 This four-layer distinction is critical:
-- Relations are pure and don't mutate (enables serialization)
+- Relations are pure and don't mutate (enables serialisation)
 - The implementation controls when nodes actually update (timestamp check ensures monotonicity)
 - DELTA bridges local updates to network communication (enables distribution)
-- RECV is the serializable message format (enables gossip and persistence)
+- RECV is the serialisable message format (enables gossip and persistence)
 
 The separation between computation (relations), conditional updates (implementation), communication generation (DELTA), and transmission (system) is what makes RaCSTS both deterministic and distributable.
 
@@ -920,7 +920,7 @@ Observe Pulse acceptance is the boundary between external events and internal pr
 
 #### Internal Propagation: Round-Based Coordination
 
-Internal propagation within a single P-REL uses the node's change time (timestamp) as the coordination mechanism. This is **separate** from the communication layer (RECV/SYNC) that handles synchronization between different P-REL instances.
+Internal propagation within a single P-REL uses the node's change time (timestamp) as the coordination mechanism. This is **separate** from the communication layer (RECV/SYNC) that handles synchronisation between different P-REL instances.
 
 **Each Propagation Round:**
 
@@ -936,7 +936,7 @@ This continues until quiescence–a round where no nodes are updated. The method
 
 **Why This Separation Matters:**
 
-Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is fundamentally different from the communication layer (RECV/SYNC) that handles synchronization between different P-REL instances in a distributed system.
+Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is fundamentally different from the communication layer (RECV/SYNC) that handles synchronisation between different P-REL instances in a distributed system.
 
 #### Quiescence Detection: Stability
 
@@ -967,30 +967,30 @@ This transition wasn't purposeful—it was organic. The abstraction led the way.
 
 **Collection Semantics:** By only using the pulse to communicate change, and by using the node's change time as the trigger, the system enabled **collection semantics**. Multiple changes to a node could be batched. The system could wait for quiescence before propagating, collecting all the mutations that happened within a single logical tick.
 
-**Performance Benefits:** Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimization—it was a fundamental shift in how the network reasoned about change.
+**Performance Benefits:** Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimisation—it was a fundamental shift in how the network reasoned about change.
 
-**Optimization Opportunities:** Collection semantics opened up optimization opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
+**Optimisation Opportunities:** Collection semantics opened up optimisation opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
 
 This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state—they were part of the state itself.
 
 ### 7.6 Serialisability and Linearity in Distributed Systems
 
-While RaCSTS is designed to make networks serializable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes how the Hybrid Epoch Clock enables both local serialisability and distributed linearity.
+While RaCSTS is designed to make networks serialisable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes how the Hybrid Epoch Clock enables both local serialisability and distributed linearity.
 
 #### The Hybrid Epoch Clock
 
-The T structure is always `[Epoch, SyncedWall, Idx]`. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components. The system achieves internal linearizability [6] through fractional refinement of the Idx component.
+The T structure is always `[Epoch, SyncedWall, Idx]`. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components. The system achieves internal linearisability [6] through fractional refinement of the Idx component.
 
 **Component Roles:**
 - **Epoch:** Logical counter that provides the primary causal ordering. This is the "most significant bit" of the timestamp
-- **SyncedWall:** NTP-synchronized wall clock time, providing physical time reference
+- **SyncedWall:** NTP-synchronised wall clock time, providing physical time reference
 - **Idx:** Disambiguates concurrent events at the same wall time. Uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to encode internal propagation rounds
 
-This structure makes the system linearizable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serializability.
+This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
 
-#### The Sway Rule: Ensuring Linearizability
+#### The Sway Rule: Ensuring Linearisability
 
-The Sway Rule ensures global linearizability [6] across distributed nodes. When a node receives a remote timestamp T_remote, it must update its local timestamp T_local to maintain strict monotonicity:
+The Sway Rule ensures global linearisability [6] across distributed nodes. When a node receives a remote timestamp T_remote, it must update its local timestamp T_local to maintain strict monotonicity:
 
 ```
 Sway Rule:
@@ -1008,18 +1008,18 @@ This "Sway Rule" ensures:
 - **Total ordering:** Any two timestamps can be compared unambiguously
 - **Clock-drift resilience:** System remains causal even if physical clocks are hours apart
 
-The Epoch carries causality forward, making physical clock synchronization an optimization rather than a requirement.
+The Epoch carries causality forward, making physical clock synchronisation an optimisation rather than a requirement.
 
-#### Clock Synchronization via Gossip
+#### Clock Synchronisation via Gossip
 
-While the Sway Rule ensures correctness, clock gossip provides optimization. The system implements clock gossip for NTP-style synchronization [9]. Each transmission bundle contains a synchronization timestamp (T_Sync), a dictionary of clocks (Clocks), and an array of pulses (Pulse[]):
+While the Sway Rule ensures correctness, clock gossip provides optimisation. The system implements clock gossip for NTP-style synchronisation [9]. Each transmission bundle contains a synchronisation timestamp (T_Sync), a dictionary of clocks (Clocks), and an array of pulses (Pulse[]):
 
 Where:
 - `T_Sync` is the sender's current `[Epoch, SyncedWall, Idx]` (with Idx containing fractional round if mid-propagation)
-- `Clocks` is `Dictionary<NodeId, WallClock>` containing observed wall clock timestamps from other nodes (used for NTP-style optimization, not for causal ordering)
+- `Clocks` is `Dictionary<NodeId, WallClock>` containing observed wall clock timestamps from other nodes (used for NTP-style optimisation, not for causal ordering)
 - `Pulse[]` is the array of state transitions being transmitted, each with its own `[Epoch, SyncedWall, Idx]` timestamp
 
-**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, SyncedWall, Idx]` timestamp. The Sway Rule ensures that when a P-REL receives a remote timestamp, it updates its local Epoch to maintain global linearizability. The Clocks dictionary is used only for optimizing physical clock synchronization (SyncedWall convergence), not for causal ordering—the Epoch component handles causality.
+**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, SyncedWall, Idx]` timestamp. The Sway Rule ensures that when a P-REL receives a remote timestamp, it updates its local Epoch to maintain global linearisability. The Clocks dictionary is used only for optimising physical clock synchronisation (SyncedWall convergence), not for causal ordering—the Epoch component handles causality.
 
 **Clock Op as Pulse:**
 The Clocks Op is itself a Pulse in the relations index. It:
@@ -1035,13 +1035,13 @@ Over time, clocks converge despite local drift:
 3. Receivers merge observed clocks using Max
 4. The SyncedWall component gradually aligns across the network
 
-This is an **optional optimization**—the Epoch-based Sway Rule ensures correctness regardless of clock synchronization quality.
+This is an **optional optimisation**—the Epoch-based Sway Rule ensures correctness regardless of clock synchronisation quality.
 
-#### Initialization: Default Epoch Value
+#### Initialisation: Default Epoch Value
 
-When initializing a new P-REL, the system sets the initial Epoch value as: **`Epoch = UnixTime + skew`**, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+When initialising a new P-REL, the system sets the initial Epoch value as: **`Epoch = UnixTime + skew`**, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
 
-**Initialization Logic:**
+**Initialisation Logic:**
 - If a node has previously computed clock skew (preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch
 - If no prior skew is available, `skew = 0` and the epoch starts at UnixTime
 - This allows nodes that have been part of the network before to start closer to the network's current causal generation
@@ -1052,17 +1052,17 @@ When initializing a new P-REL, the system sets the initial Epoch value as: **`Ep
 - Nodes with prior network participation start closer to the current causal generation, reducing the initial Epoch jump required when they reconnect
 - The Sway Rule handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch
 
-This decision stabilizes the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilizing—it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+This decision stabilises the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising—it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
 
-#### Internal Linearizability: Fractional Idx Refinement
+#### Internal Linearisability: Fractional Idx Refinement
 
-The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearizability [6] **even outside individual P-RELs**—when multiple P-RELs are coordinating or when splitting a P-REL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
+The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearisability [6] **even outside individual P-RELs**—when multiple P-RELs are coordinating or when splitting a P-REL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
 
-**Behavior:**
+**Behaviour:**
 - **External input (Observe Pulse):** Increments BaseIdx, Round starts at 0
 - **Internal propagation (Link Relation):** Increments Round, Idx becomes fractional
 - **Bounded rounds:** Round ∈ [0, MaxRounds), preventing unbounded fractional growth
-- **Serialization:** The computed fractional Idx value is part of T, serialized as a single number
+- **Serialisation:** The computed fractional Idx value is part of T, serialised as a single number
 
 **Example:** When an external Observe Pulse arrives, T might be [5, 1704067200, 42.00] (BaseIdx=42, Round=0). As links propagate, the Round increments: 42.01, 42.02, etc. When quiescence is reached at Round=5, T is [5, 1704067200, 42.05]. The next external Observe Pulse increments BaseIdx to 43 and resets Round to 0, yielding [5, 1704067200, 43.00].
 
@@ -1070,28 +1070,28 @@ The fractional Idx allows strict ordering of the propagation wavefront without r
 
 #### Implications for Serialisability
 
-This architecture ensures that P-REL serialization preserves causal order across distributed boundaries:
+This architecture ensures that P-REL serialisation preserves causal order across distributed boundaries:
 
 **When packing a P-REL:**
-- All T timestamps are serialized as `[Epoch, SyncedWall, Idx]` where Idx contains the fractional refinement
-- The Clocks dictionary (if present) is serialized as metadata
+- All T timestamps are serialised as `[Epoch, SyncedWall, Idx]` where Idx contains the fractional refinement
+- The Clocks dictionary (if present) is serialised as metadata
 - Causal relationships are preserved in the Epoch ordering
 - Fractional Idx values are preserved exactly, maintaining internal propagation ordering
 
 **When unpacking a P-REL:**
 - Timestamps are restored exactly, including fractional Idx values
 - The receiving node applies the Sway Rule to its local clock based on the unpacked Epochs
-- Propagation can resume from the exact state where it was serialized
+- Propagation can resume from the exact state where it was serialised
 - The fractional Idx allows the receiving node to correctly order unpacked operations relative to its own ongoing propagation
 
-**Cross-P-REL linearizability:**
-- A P-REL serialized on Node A can be deserialized on Node B
+**Cross-P-REL linearisability:**
+- A P-REL serialised on Node A can be deserialised on Node B
 - Node B's local clock may be completely different
 - The Epoch-based ordering ensures Node B correctly orders all operations relative to its local state
 - The fractional Idx ensures operations from the unpacked P-REL interleave correctly with Node B's local propagation
 - Clock gossip (if enabled) allows Node B to gradually align its SyncedWall with the network
 
-This makes RaCSTS networks truly portable across distributed boundaries—serialization and deserialization are inverses that preserve all causal structure. The fractional Idx refinement is what enables linearizability **outside individual P-RELs**, allowing multiple P-RELs to coordinate or merge while maintaining strict causal ordering.
+This makes RaCSTS networks truly portable across distributed boundaries—serialisation and deserialisation are inverses that preserve all causal structure. The fractional Idx refinement is what enables linearisability **outside individual P-RELs**, allowing multiple P-RELs to coordinate or merge while maintaining strict causal ordering.
 
 ### 7.6 Leader-Free Consensus via Sync Op: Fixed-Point Gossip
 
@@ -1101,7 +1101,7 @@ RaCSTS provides a natural mechanism for distributed consensus without request-re
 
 The system achieves consensus without a leader through three foundational properties:
 
-1. **The Sway Rule ensures global linearizability without a central master clock**: When nodes receive remote timestamps, the Epoch-based Sway Rule advances their local clock to maintain total ordering. No central coordinator is needed—each node independently maintains causal correctness through local logic.
+1. **The Sway Rule ensures global linearisability without a central master clock**: When nodes receive remote timestamps, the Epoch-based Sway Rule advances their local clock to maintain total ordering. No central coordinator is needed—each node independently maintains causal correctness through local logic.
 
 2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
 
@@ -1111,7 +1111,7 @@ The system achieves consensus without a leader through three foundational proper
 
 An **Observe rejection** occurs when an Observe Pulse arrives at a node but the `Old` value in the Pulse doesn't match the node's current state (Cur ≠ Old). This can happen when:
 - A node has been partitioned and rejoins the network
-- A P-REL is deserialized in a new environment
+- A P-REL is deserialised in a new environment
 - Concurrent updates have diverged
 - A node speculatively committed a value that conflicts with network consensus
 
@@ -1125,7 +1125,7 @@ The transition to `stale` is the trigger for consensus coordination—it opens t
 
 #### Sync Op Structure
 
-The Sync Op is a specialized Op Relation that emits a consensus accumulator. It takes a count (target threshold for consensus, such as quorum size or node count), a path (state path being decided, like "config" or "LeaderID"), and a dictionary (accumulator mapping nodeId to value).
+The Sync Op is a specialised Op Relation that emits a consensus accumulator. It takes a count (target threshold for consensus, such as quorum size or node count), a path (state path being decided, like "config" or "LeaderID"), and a dictionary (accumulator mapping nodeId to value).
 
 The Sync Op is not a request-response—it's a **propagating constraint** that accumulates witnesses as it flows through the gossip fabric.
 
@@ -1196,7 +1196,7 @@ The Sync Op leverages the propagator network's fundamental property: **local con
 - These properties guarantee convergence without any central coordinator
 - If a network splits and both sides modify the Sync dictionary, they simply join when they reconnect
 
-**Local Network Behavior:**
+**Local Network Behaviour:**
 - Every node is always "correct" relative to its current state
 - There is no "invalid" local state—only partial information
 - A node doesn't wait for global truth to act; it produces the best possible output based on current local knowledge
@@ -1247,7 +1247,7 @@ Node A detects an Observe rejection when its local value is 10 but an incoming O
 
 This mechanism treats consensus not as heavyweight coordination, but as a natural consequence of the propagator network's fundamental mechanics. The RECV refinement ensures that fixed-point gossip emerges naturally from the system's core operation.
 
-**The Observe Guardrail:** For bidirectional relations (like the temperature converter example), developers might fear infinite loops. The Observe operation's "Old vs. New" check acts as an implicit circuit breaker: if `New === Old`, the operation is a no-op and propagation stops. This prevents circular dependencies from causing infinite propagation when values stabilize.
+**The Observe Guardrail:** For bidirectional relations (like the temperature converter example), developers might fear infinite loops. The Observe operation's "Old vs. New" check acts as an implicit circuit breaker: if `New === Old`, the operation is a no-op and propagation stops. This prevents circular dependencies from causing infinite propagation when values stabilise.
 
 **The Leader-Free Property:**
 
@@ -1256,7 +1256,7 @@ Consensus in RaCSTS is leader-free because:
 - **No single point of failure**: Any node can initiate consensus; no designated coordinator
 - **Partition tolerance**: Network splits don't break consensus—they pause it. Reconnection triggers automatic merge through join operations
 - **Zero-Knowledge verification**: Each node independently verifies causal correctness through local Epoch comparison and OLD value matching (transitions to `stale` on mismatch)
-- **The network IS the coordinator**: Consensus emerges from the local interactions of propagator cells, not from centralized logic
+- **The network IS the coordinator**: Consensus emerges from the local interactions of propagator cells, not from centralised logic
 
 This is not bolt-on leader-free consensus—it's an emergent property of the propagator network's mathematical foundation.
 
@@ -1274,7 +1274,7 @@ In pathological cases, a network may oscillate between two states indefinitely. 
 RaCSTS includes a bounded execution mechanism to prevent infinite loops:
 
 - **MaxRounds:** A configuration parameter limiting the number of propagation rounds per logical time step
-- **Behavior:** When Round reaches MaxRounds, propagation halts for that time step
+- **Behaviour:** When Round reaches MaxRounds, propagation halts for that time step
 - **Result:** The system returns partial state + evidence of progress (T-ordering shows forward progress even if quiescence isn't reached)
 - **Interpretation:** Partial state indicates the network may not converge without external constraints. Progress evidence (T advances) shows the system is making forward progress, not deadlocked.
 
@@ -1296,7 +1296,7 @@ When MaxRounds is reached:
 
 - **External Constraints:** Add external Observe Pulses to break cycles
 - **Relation Design:** Ensure relations satisfy monotonicity properties
-- **MaxRounds Tuning:** Increase MaxRounds for complex networks, but recognize that some networks may require external intervention
+- **MaxRounds Tuning:** Increase MaxRounds for complex networks, but recognise that some networks may require external intervention
 
 **Important:** Circuit breakers are a bounded execution mechanism, not a correctness guarantee. They prevent infinite loops in adversarial graphs but do not guarantee quiescence. Progress evidence (T-ordering) shows the system is making forward progress, but bounded execution may halt before full quiescence is reached.
 
@@ -1313,32 +1313,32 @@ When MaxRounds is reached:
 
 **Etymology and Meaning:** The name "Suss" honors Gerald J. Sussman, whose foundational work on propagator networks with Alexey Radul [1] provided the theoretical foundation for this system. But it also doubles as an evocative verb in modern English—to "suss out" means to investigate, to understand, or to find the truth of a situation. This perfectly encapsulates what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it. The library susses out the state, susses out the relationships, susses out what needs to propagate.
 
-**Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (adding operations to change sets, collapsing redundant operations, materializing values through interpretation, computing constraint alignments) are the complete toolkit. Everything else is built from these primitives.
+**Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (adding operations to change sets, collapsing redundant operations, materialising values through interpretation, computing constraint alignments) are the complete toolkit. Everything else is built from these primitives.
 
-**Purpose:** Suss exists to prove RaCSTS works and to provide practical tooling for building serializable propagator networks in TypeScript. It is opinionated about correctness, not about how you use it.
+**Purpose:** Suss exists to prove RaCSTS works and to provide practical tooling for building serialisable propagator networks in TypeScript. It is opinionated about correctness, not about how you use it.
 
 ### 8.2 Reference Implementation
 
-**Correctness and Clarity:** Suss prioritizes correctness and clarity over performance. The implementation demonstrates that RaCSTS is implementable without compromises to the specification.
+**Correctness and Clarity:** Suss prioritises correctness and clarity over performance. The implementation demonstrates that RaCSTS is implementable without compromises to the specification.
 
 **The Four Core Operations:** Suss implements the four core operations exactly as specified in the RaCSTS specification. All operate on CAnATL structures and change sets:
 - Adding Pulses to change sets while maintaining T-ordering
 - Collapsing redundant operations in change sets while preserving causal integrity
-- Projecting CAnATL through interpretation functions to materialize values
+- Projecting CAnATL through interpretation functions to materialise values
 - Computing reconciliation operations for pairs of cells according to relations
 
 **Type Safety:** Suss is strongly typed. TypeScript types for CAnATL, Value, Pulse, and all other entities ensure correctness at compile time. The type system enforces invariants that would be runtime errors in untyped implementations.
 
-**Serialization:** Suss can serialize P-REL (containing nodes with ATL values, links array, relations, meta, and asOf) to JSON and deserialize JSON back to P-REL with identical structure. The implementation demonstrates deterministic round-trip—serializing and deserializing a network produces an identical network. Only the P-REL structure is guaranteed serializable; literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations.
+**Serialisation:** Suss can serialise P-REL (containing nodes with ATL values, links array, relations, meta, and asOf) to JSON and deserialise JSON back to P-REL with identical structure. The implementation demonstrates deterministic round-trip—serialising and deserialising a network produces an identical network. Only the P-REL structure is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
 
-Serialization is not bolted on—it is fundamental to how Suss works.
+Serialisation is not bolted on—it is fundamental to how Suss works.
 
 ### 8.3 Provided Networks
 
 **Shadow Object Propagator:** Suss provides a built-in network for shadow object models. This network demonstrates sparse encoding:
 - Uses P-REL nodes with ATL values to represent only essential object state
-- Much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque
-- Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serializable
+- Much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque
+- Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable
 - Maintains private state for dirty propagation logic (relations maintain their own temporal context)
 - Provides dirty propagation (manual triggering)
 - Bridges imperative JavaScript code with the propagator model
@@ -1348,8 +1348,8 @@ This illustrates that P-REL is not a direct conversion of entire user objects—
 **Integration Patterns:** Suss demonstrates how to bridge imperative code and the propagator model:
 - Convert JavaScript objects to CAnATL structures
 - Create Op Relations that emit Pulses from object mutations
-- Use Link Relations to synchronize related objects
-- Serialize complete object graphs as P-REL snapshots
+- Use Link Relations to synchronise related objects
+- Serialise complete object graphs as P-REL snapshots
 
 The Shadow Object Propagator is both a useful primitive and a reference implementation of integration patterns.
 
@@ -1357,19 +1357,19 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 
 **Performance:** Performance is a function of connectivity, not network size (e.g., O(e) where e is the number of active edges). Networks with high connectivity (many links per node) require more propagation rounds to reach quiescence. Propagation respects causal ordering across rounds (T-ordering), but within a single round, many nodes can update in parallel as long as they're not causally dependent. Highly connected nodes create bottlenecks because they require more rounds to reach quiescence. Sparse networks with low connectivity can be very fast even with many nodes.
 
-**Serialization:** Serialization can be optimized by caching serialized representations in metadata. However, metadata has zero guarantees regarding preservation during serialization cycles—implementations may discard, modify, or ignore metadata. Only the core P-REL structure (nodes, links, relations, meta, asOf) is guaranteed to round-trip. Literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations.
+**Serialisation:** Serialisation can be optimised by caching serialised representations in metadata. However, metadata has zero guarantees regarding preservation during serialisation cycles—implementations may discard, modify, or ignore metadata. Only the core P-REL structure (nodes, links, relations, meta, asOf) is guaranteed to round-trip. Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
 
 **Storage:** CAnATL cells contain only authoritative state—no history, window, or context at the node level. Relations that require temporal context (smoothing, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cells.
 
 **History Preservation:** Cells do not preserve history. If you need complete history:
 - Use persistent immutable data structures (structural sharing preserves history naturally)
 - Maintain a separate pulse log to record all operations
-- Store snapshots at key points (serialize P-REL periodically)
+- Store snapshots at key points (serialise P-REL periodically)
 
 **Batching:** Batch operations for performance. Instead of computing constraint alignments after every Op, collect multiple Ops and compute alignments once. Change sets enable this naturally.
 
 **Distribution:** Splitting networks across boundaries:
-- Serialize P-REL subgraphs
+- Serialise P-REL subgraphs
 - Transmit P-REL subgraphs as values
 - Provide environment-specific resolvers at each boundary
 - Use Pulse exchange for cross-boundary propagation
@@ -1387,42 +1387,42 @@ The CAnATL wrapper adds structure overhead compared to plain in-memory state obj
   - Meta: optional ATL (variable, often empty)
   - **Total overhead:** ~50-100 bytes per cell for simple values, compared to ~8 bytes for a plain number
 
-- **Computation:** Materializing a Value through interpretation adds one function call per cell read. For simple interpretations (identity function), this is negligible. For complex interpretations, the cost is the interpretation function itself, not the CAnATL structure.
+- **Computation:** Materialising a Value through interpretation adds one function call per cell read. For simple interpretations (identity function), this is negligible. For complex interpretations, the cost is the interpretation function itself, not the CAnATL structure.
 
-**Serialization Overhead:**
+**Serialisation Overhead:**
 
-Serialization adds JSON encoding overhead:
+Serialisation adds JSON encoding overhead:
 
-- **Size:** JSON serialization of a CAnATL cell is typically 2-3x the in-memory size due to:
+- **Size:** JSON serialisation of a CAnATL cell is typically 2-3x the in-memory size due to:
   - JSON string encoding
   - Structure metadata (brackets, commas, keys)
   - String representation of numbers and tags
-- **Time:** Serialization requires traversing the entire P-REL structure. For a network with N nodes and L links:
+- **Time:** Serialisation requires traversing the entire P-REL structure. For a network with N nodes and L links:
   - **Time complexity:** O(N + L) — linear in network size
   - **Space complexity:** O(N + L) — linear in network size
-  - **Practical performance:** For networks with <1000 nodes, serialization typically takes <10ms in JavaScript
+  - **Practical performance:** For networks with <1000 nodes, serialisation typically takes <10ms in JavaScript
 
 **Relative to Standard State Objects:**
 
 Compared to standard in-memory state objects (e.g., plain JavaScript objects, Redux stores):
 
 - **Memory:** CAnATL adds ~50-100 bytes overhead per cell. For 1000 cells, this is ~50-100KB overhead.
-- **Read performance:** Materialization adds one function call per read. Negligible for simple values, significant only for complex interpretations.
+- **Read performance:** Materialisation adds one function call per read. Negligible for simple values, significant only for complex interpretations.
 - **Write performance:** Observe operations require CAS checks (Cur == Old comparison). This adds one equality check per write, typically negligible.
-- **Serialization:** Standard state objects require custom serialization logic. CAnATL serialization is automatic but adds JSON encoding overhead (2-3x size increase).
+- **Serialisation:** Standard state objects require custom serialisation logic. CAnATL serialisation is automatic but adds JSON encoding overhead (2-3x size increase).
 
 **Bottlenecks:**
 
 - **Connectivity:** The primary performance factor is connectivity (links per node), not network size. A network with 10,000 nodes and 10,000 links (sparse) is faster than a network with 100 nodes and 10,000 links (dense).
 - **Propagation rounds:** Each round requires O(L) relation evaluations. High connectivity increases rounds to quiescence.
-- **Serialization:** Large networks (>10,000 nodes) may take >100ms to serialize. Use incremental serialization or subgraph extraction for large networks.
+- **Serialisation:** Large networks (>10,000 nodes) may take >100ms to serialise. Use incremental serialisation or subgraph extraction for large networks.
 
-**Optimization Strategies:**
+**Optimisation Strategies:**
 
-- **Metadata caching:** Cache serialized representations in metadata (zero guarantees for preservation).
+- **Metadata caching:** Cache serialised representations in metadata (zero guarantees for preservation).
 - **Batching:** Collect multiple Observe Pulses before propagation to reduce round count.
-- **Subgraph extraction:** Serialize only relevant subgraphs for transmission.
-- **Lazy materialization:** Materialize Values only when needed, not on every read.
+- **Subgraph extraction:** Serialise only relevant subgraphs for transmission.
+- **Lazy materialisation:** Materialise Values only when needed, not on every read.
 
 **Sharp Edges and Limitations:**
 - Deep recursive ATL structures can cause stack overflow (JavaScript recursion limits)
@@ -1445,9 +1445,9 @@ Suss supports bidirectional constraints where multiple cells maintain relationsh
 
 Suss handles circular dependencies naturally. Networks with cycles propagate until reaching quiescence—a stable state where all constraints are satisfied. T-ordering ensures forward progress even in complex circular graphs. The system iterates through propagation rounds, with each round advancing logical time, until no further updates occur.
 
-#### Serialization: Pause and Resume
+#### Serialisation: Pause and Resume
 
-Suss can serialize a network's complete state (P-REL) to JSON at any point. This serialized network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialized to resume exactly where it left off. The network's topology, node states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
+Suss can serialise a network's complete state (P-REL) to JSON at any point. This serialised network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialised to resume exactly where it left off. The network's topology, node states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
 
 #### Snapshot Files: Bug Reports with Network State
 
@@ -1461,23 +1461,23 @@ From §1.0's promise: A bug report includes a P-REL snapshot file. In production
 
 ### 9.1 The Solution
 
-RaCSTS provides a formal specification for serializable propagator networks. By reframing networks as properly basic data structures built from CAnATL (Causal Annotated Associative Tagged Literals), RaCSTS makes networks into values.
+RaCSTS provides a formal specification for serialisable propagator networks. By reframing networks as properly basic data structures built from CAnATL (Causal Annotated Associative Tagged Literals), RaCSTS makes networks into values.
 
 The specification is complete:
 - Type hierarchy from Literal to CAnATL defines properly basic types
 - Model entities bridge formal definitions to operational semantics
-- Core operations (adding operations, collapsing redundant operations, materializing values, computing constraint alignments) provide complete control
-- Properties and guarantees (monotonicity, serializable consistency, scale invariance, meta-circularity) are testable
+- Core operations (adding operations, collapsing redundant operations, materialising values, computing constraint alignments) provide complete control
+- Properties and guarantees (monotonicity, serialisable consistency, scale invariance, meta-circularity) are testable
 
-Suss, the TypeScript reference implementation, demonstrates that RaCSTS is practical. The four core operations, strong typing, and serialization capabilities prove that the specification can be implemented without compromises.
+Suss, the TypeScript reference implementation, demonstrates that RaCSTS is practical. The four core operations, strong typing, and serialisation capabilities prove that the specification can be implemented without compromises.
 
 The transformation is complete: networks are no longer infrastructure you configure—they are values you manipulate.
 
 ### 9.2 Capabilities Unlocked
 
-When networks become serializable values, capabilities that were impossible or required heavy infrastructure become natural:
+When networks become serialisable values, capabilities that were impossible or required heavy infrastructure become natural:
 
-**Serializable networks:** CAnATL structures serialize to JSON. Pack/unpack operations enable pause/resume of complete network state.
+**Serialisable networks:** CAnATL structures serialise to JSON. Pack/unpack operations enable pause/resume of complete network state.
 
 **Scale invariance:** The same primitives work at all scales—single cells, subnetworks, whole networks, meta-networks. No special cases.
 
@@ -1487,9 +1487,9 @@ When networks become serializable values, capabilities that were impossible or r
 
 **Network composition:** Build systems by composing networks. Network libraries become possible—reusable network patterns shared like code libraries.
 
-**Cross-boundary integration:** Networks work across any boundary—browser, server, mobile, embedded—because they're serializable data.
+**Cross-boundary integration:** Networks work across any boundary—browser, server, mobile, embedded—because they're serialisable data.
 
-**Time-travel debugging:** Serialize network state at any point. Step backward and forward through time. Replay from any state. P-REL snapshots are the currency of debugging.
+**Time-travel debugging:** Serialise network state at any point. Step backward and forward through time. Replay from any state. P-REL snapshots are the currency of debugging.
 
 **Network versioning:** Track changes to network structure over time. Use Git for network history. Diff P-REL snapshots to see what changed.
 
@@ -1497,15 +1497,15 @@ When networks become serializable values, capabilities that were impossible or r
 
 RaCSTS opens research and engineering directions:
 
-**Extensions:** Domain-specific propagators for UI, physics, optimization, machine learning. Custom higher-order relations beyond the standard toolkit (mark, linear, map, constrain, join, reduce).
+**Extensions:** Domain-specific propagators for UI, physics, optimisation, machine learning. Custom higher-order relations beyond the standard toolkit (mark, linear, map, constrain, join, reduce).
 
 **Integration:** Patterns for integrating RaCSTS networks with existing frameworks. React integration. Redux integration. Database integration.
 
 **Formal Verification:** Proving properties of CAnATL structures and network topologies. Verifying that specific networks always reach quiescence. Static analysis of P-REL structures.
 
-**Ecosystem:** Network libraries for common patterns. Marketplaces for sharing networks. Tooling for inspecting, analyzing, and optimizing P-REL structures.
+**Ecosystem:** Network libraries for common patterns. Marketplaces for sharing networks. Tooling for inspecting, analysing, and optimising P-REL structures.
 
-**Performance:** Optimizations for large-scale networks. Parallel propagation where causal independence allows. Incremental serialization (delta encoding). Persistent immutable data structures for efficient history preservation through structural sharing.
+**Performance:** Optimisations for large-scale networks. Parallel propagation where causal independence allows. Incremental serialisation (delta encoding). Persistent immutable data structures for efficient history preservation through structural sharing.
 
 **History and Replay:** Pulse log systems for recording complete operation history. Replay mechanisms for time-travel debugging. Integration with persistent data structures for zero-copy history preservation.
 
@@ -1515,11 +1515,11 @@ If RaCSTS makes networks into values, what is the next object we still lack?
 
 **Standard network diff/merge semantics:** How do we diff two P-REL structures meaningfully? How do we merge divergent network states? Current diff tools work on text, not network topology. We need semantic diff/merge for P-REL.
 
-**Market-grade trust and provenance:** How do we verify that a P-REL snapshot came from a trusted source? How do we track lineage through serialization and transmission? We need signed P-REL snapshots with verifiable provenance chains.
+**Market-grade trust and provenance:** How do we verify that a P-REL snapshot came from a trusted source? How do we track lineage through serialisation and transmission? We need signed P-REL snapshots with verifiable provenance chains.
 
 **Formal verification of relations:** How do we prove that a relation always reaches quiescence? How do we verify that a network of relations has no pathological cycles? We need tools for static analysis of relation correctness.
 
-**Cross-runtime canonical resolvers:** How do we ensure that a Node Resolver in JavaScript produces the same results as one in Python or Rust? How do we define canonical interpretations that work across languages? We need a specification for resolver behavior, not just resolver signatures.
+**Cross-runtime canonical resolvers:** How do we ensure that a Node Resolver in JavaScript produces the same results as one in Python or Rust? How do we define canonical interpretations that work across languages? We need a specification for resolver behaviour, not just resolver signatures.
 
 Each solution reveals the next missing object. The journey continues.
 
@@ -1543,11 +1543,11 @@ Each solution reveals the next missing object. The journey continues.
 
 **Epoch:** Logical counter component of T timestamp. Provides primary causal ordering. The "most significant bit" of the timestamp.
 
-**Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearizability even outside individual P-RELs.
+**Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearisability even outside individual P-RELs.
 
-**Hybrid Epoch Clock (T):** Logical timestamp structure `[Epoch, SyncedWall, Idx]` where Epoch is logical counter, SyncedWall is NTP-synchronized wall time, and Idx disambiguates concurrent events with fractional refinement.
+**Hybrid Epoch Clock (T):** Logical timestamp structure `[Epoch, SyncedWall, Idx]` where Epoch is logical counter, SyncedWall is NTP-synchronised wall time, and Idx disambiguates concurrent events with fractional refinement.
 
-**Interpretation:** A function that projects a CAnATL to a materialized Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
+**Interpretation:** A function that projects a CAnATL to a materialised Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
 
 **Lineage (State):** The provenance and authority level of a cell's value. Four types in hierarchy: `'observed'` (Observe accepted—always wins), `'consensus'` (Sync completed—beats stale and derived), `'stale'` (Observe rejected, seeking consensus—beats derived), `'derived'` (Link computed—lowest authority). Authority: observed > consensus > stale > derived.
 
@@ -1567,13 +1567,13 @@ Each solution reveals the next missing object. The journey continues.
 
 **Op Relation:** External operation that introduces entropy. Signature: `op(P-REL, args, meta) -> [delta-P-REL, Pulse[], meta']`. Entry point for external change.
 
-**P-REL (Parallel Relational Layer):** The serializable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
+**P-REL (Parallel Relational Layer):** The serialisable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
 
 **Pulse:** The atomic unit of propagation. Structure: `[T, Tag, Args, Meta?]`. The fundamental unit that flows through the network.
 
 **Quiescence:** State where no further propagation occurs. All cells are stable, no operations accepted. The "solution" to the constraint network.
 
-**RaCSTS (Relational and Causal State Transition System):** Pronounced "Rackets." The specification for serializable propagator networks. Grounded in State Transition Systems theory.
+**RaCSTS (Relational and Causal State Transition System):** Pronounced "Rackets." The specification for serialisable propagator networks. Grounded in State Transition Systems theory.
 
 **Scale Invariance:** Property that the same primitives work at all scales—single cells, subnetworks, whole networks, meta-networks. No special handling required for nested networks.
 
@@ -1583,15 +1583,15 @@ Each solution reveals the next missing object. The journey continues.
 
 **Suss:** The reference TypeScript implementation of RaCSTS. Demonstrates practical application and proves the specification is implementable.
 
-**Sync Op:** Specialized Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
+**Sync Op:** Specialised Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
 
-**Sway Rule:** When a node receives a remote timestamp T_remote, it updates its local timestamp T_local to maintain strict monotonicity: `T_local = max(T_local, T_remote)`. Ensures global linearizability without a central master clock.
+**Sway Rule:** When a node receives a remote timestamp T_remote, it updates its local timestamp T_local to maintain strict monotonicity: `T_local = max(T_local, T_remote)`. Ensures global linearisability without a central master clock.
 
-**T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serializability.
+**T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serialisability.
 
-**Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serializing individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
+**Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serialising individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
 
-**Value:** Union type `AnATL | AnTL`. The type of "a value" in the system—any serializable data with optional semantic tags and annotations.
+**Value:** Union type `AnATL | AnTL`. The type of "a value" in the system—any serialisable data with optional semantic tags and annotations.
 
 ### Appendix B: Complete Type Definitions
 
@@ -1649,7 +1649,7 @@ interface Node {
 
 // Relation in P-REL (implementation-dependent)
 // Relations are opaque - their structure depends on the implementation
-// For serialization, relations are recreated from metadata or relation definitions
+// For serialisation, relations are recreated from metadata or relation definitions
 type Relation = unknown  // Implementation-dependent structure
 
 interface Link {
@@ -1693,7 +1693,7 @@ This example demonstrates how RaCSTS bridges theory to code with a concrete, min
 
 **The Linear Relation:**
 
-Recall from Section 6.3.5 that `linear` is a bidirectional numeric relation that solves linear relationships of the form `y = a + bx`. Given this form, unit conversions become straightforward parameterization.
+Recall from Section 6.3.5 that `linear` is a bidirectional numeric relation that solves linear relationships of the form `y = a + bx`. Given this form, unit conversions become straightforward parameterisation.
 
 **The Conversion Formula:**
 
@@ -1800,9 +1800,9 @@ const observeCelsius: ObservePulse = [
 // The Fahrenheit cell updates via the linear relation
 ```
 
-**Serialization:**
+**Serialisation:**
 
-The entire network serializes to JSON:
+The entire network serialises to JSON:
 
 ```json
 {
@@ -1821,7 +1821,7 @@ The entire network serializes to JSON:
     }
   },
   "relations": {
-    "temp": "linear(32, 1.8)"  // Serialized as relation definition, recreated at deserialization
+    "temp": "linear(32, 1.8)"  // Serialised as relation definition, recreated at deserialisation
   },
   "links": [
     {
@@ -1838,25 +1838,25 @@ The entire network serializes to JSON:
 }
 ```
 
-Note: Relations are implementation-dependent structures in the runtime PREL. For serialization, they are stored as relation definitions (e.g., `"linear(32, 1.8)"`) and recreated when deserialized by instantiating the higher-order relation with the stored parameters. Node values are ATL structures where tagged literals dispatch on tag for interpretation. This enables sparse encoding—only essential state is serialized, not full object representations.
+Note: Relations are implementation-dependent structures in the runtime PREL. For serialisation, they are stored as relation definitions (e.g., `"linear(32, 1.8)"`) and recreated when deserialised by instantiating the higher-order relation with the stored parameters. Node values are ATL structures where tagged literals dispatch on tag for interpretation. This enables sparse encoding—only essential state is serialised, not full object representations.
 
-This serialized network can be transmitted, stored, or resumed—the network is a value.
+This serialised network can be transmitted, stored, or resumed—the network is a value.
 
 **Key Insight:**
 
-The `linear` relation demonstrates how RaCSTS makes common patterns trivial. Unit conversions, coordinate transformations, and linear constraints all reduce to parameterized links. The relation handles bidirectionality, inverse computation, and propagation automatically. This is the power of properly basic data structures combined with standard higher-order relations.
+The `linear` relation demonstrates how RaCSTS makes common patterns trivial. Unit conversions, coordinate transformations, and linear constraints all reduce to parameterised links. The relation handles bidirectionality, inverse computation, and propagation automatically. This is the power of properly basic data structures combined with standard higher-order relations.
 
 ### Appendix D: Comparison with Related Work
 
-**Propagator Networks (Sussman & Radul) [1]:** RaCSTS builds on the propagator model but adds serialization as a first-class concern. Traditional propagators are runtime constructs; RaCSTS makes them values.
+**Propagator Networks (Sussman & Radul) [1]:** RaCSTS builds on the propagator model but adds serialisation as a first-class concern. Traditional propagators are runtime constructs; RaCSTS makes them values.
 
 **CRDTs (Conflict-free Replicated Data Types) [7,8]:** CRDTs ensure convergence in distributed systems. RaCSTS uses similar ideas (monotonicity, convergence) but for propagation networks, not distributed state.
 
-**Reactive Programming (RxJS, MobX):** Reactive libraries handle data flow and change propagation. RaCSTS makes the network itself serializable, enabling capabilities reactive libraries don't provide.
+**Reactive Programming (RxJS, MobX):** Reactive libraries handle data flow and change propagation. RaCSTS makes the network itself serialisable, enabling capabilities reactive libraries don't provide.
 
 **State Machines:** State machines define transitions between discrete states. RaCSTS is grounded in State Transition Systems [15] but focuses on networks of continuous propagation, not discrete state machines.
 
-**Datalog / Logic Programming [16,17]:** Datalog defines relations and propagates constraints. RaCSTS provides similar constraint propagation but with serializable, temporal networks as first-class values.
+**Datalog / Logic Programming [16,17]:** Datalog defines relations and propagates constraints. RaCSTS provides similar constraint propagation but with serialisable, temporal networks as first-class values.
 
 ### Appendix E: Failure Modes and Non-Convergence
 
@@ -1911,7 +1911,7 @@ External intervention may be needed:
 - Modify topology (remove problematic links)
 
 **Verification:**
-Inspect progress evidence (T-ordering, execution trace) to understand why convergence failed. Analyze relation behavior, identify oscillations or divergence patterns.
+Inspect progress evidence (T-ordering, execution trace) to understand why convergence failed. Analyze relation behaviour, identify oscillations or divergence patterns.
 
 Non-convergence is not a failure of RaCSTS—it's a property of the specific network. RaCSTS provides tools (circuit breakers, progress evidence, execution traces) to detect, diagnose, and recover from non-convergence gracefully.
 
@@ -1948,9 +1948,9 @@ Non-convergence is not a failure of RaCSTS—it's a property of the specific net
 
 5. **Kulkarni, S., et al.** (2014). Logical Physical Clocks and Consistent Snapshots in Globally Distributed Databases. *Proceedings of the VLDB Endowment*, 8(12), 1446-1457. Available: https://cse.buffalo.edu/tech-reports/2014-04.pdf
 
-6. **Herlihy, M. P., & Wing, J. M.** (1990). Linearizability: A Correctness Condition for Concurrent Objects. *ACM Transactions on Programming Languages and Systems*, 12(3), 463-492. Available: https://cs.brown.edu/~mph/HerlihyW90/p463-herlihy.pdf
+6. **Herlihy, M. P., & Wing, J. M.** (1990). Linearisability: A Correctness Condition for Concurrent Objects. *ACM Transactions on Programming Languages and Systems*, 12(3), 463-492. Available: https://cs.brown.edu/~mph/HerlihyW90/p463-herlihy.pdf
 
-7. **Shapiro, M., et al.** (2011). Conflict-free Replicated Data Types. *Proceedings of the 13th International Symposium on Stabilization, Safety, and Security of Distributed Systems (SSS 2011)*, 386-400. Available: https://hal.inria.fr/inria-00555588/document
+7. **Shapiro, M., et al.** (2011). Conflict-free Replicated Data Types. *Proceedings of the 13th International Symposium on Stabilisation, Safety, and Security of Distributed Systems (SSS 2011)*, 386-400. Available: https://hal.inria.fr/inria-00555588/document
 
 8. **Shapiro, M., et al.** (2011). A Comprehensive Study of Convergent and Commutative Replicated Data Types. *Rapport de recherche RR-7506, INRIA*. Available: https://hal.inria.fr/inria-00555588/document
 
