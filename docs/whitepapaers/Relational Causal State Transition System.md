@@ -28,9 +28,9 @@ Familiarity with reactive programming (React, RxJS, MobX), state management patt
 
 **What is delivered:**
 
-- **RaCSTS Specification**: A formal definition of propagator networks as serializable values, grounded in State Transition Systems
-- **Implementable Model**: Complete architecture with type hierarchy, primitives, and operational semantics
-- **Suss Toolkit**: Reference TypeScript implementation demonstrating practical application
+- **RaCSTS Specification** (§6): A formal definition of propagator networks as serializable values, grounded in State Transition Systems (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
+- **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serializability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-REL serialization (§7.2).
+- **Suss Toolkit** (§8): Reference TypeScript implementation demonstrating practical application. Includes performance analysis (§8.4) and usage patterns (§8.5).
 
 **What is not delivered:**
 
@@ -289,7 +289,7 @@ This is what RaCSTS provides: a specification for networks as serializable value
 
 RaCSTS is defined by three pillars:
 
-**P-REL (Parallel Relational Layer):** The serializable blueprint containing network topology, state, links, and causal markers. P-REL is passive—it contains no executable logic, only references to logic.
+**P-REL (Parallel Relational Layer):** The serializable blueprint containing nodes, relations, links (array), meta, and asOf (T). P-REL is independent of RaCSTS and is a sparse encoding—not a direct conversion of entire user objects. Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serializable; literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations. P-REL is passive—it contains no executable logic, only references to logic.
 
 **Node Resolver:** A function `fn(nodeId, P-REL) -> RealNode` that resolves opaque node identifiers in P-REL to concrete node implementations with a standard interface.
 
@@ -300,6 +300,25 @@ This three-pillar architecture achieves complete separation of concerns: P-REL i
 ### 6.2 The Type Hierarchy: Properly Basic Data Structures
 
 RaCSTS builds networks from properly basic types, ensuring serializability at every level:
+
+**Type Hierarchy (Nested Structure):**
+
+The type system follows a nested "Russian Doll" pattern, where each layer adds structure while preserving serializability:
+
+```
+CAnATL [T, Tag, Value, Meta?]
+  └─ Value = AnATL | AnTL
+      ├─ AnATL [Dictionary<ATL>, Annotations>], Annotations]
+      │   └─ ATL = Dictionary<ATL | TL | TL[]>
+      │       └─ TL = [Tag, Literal]
+      │           └─ Literal = any serializable value
+      └─ AnTL [Tag, Literal, Annotations]
+          ├─ Tag = string
+          ├─ Literal = any serializable value
+          └─ Annotations = ATL
+```
+
+Each layer wraps the previous, adding semantic structure (tags, annotations, causality) without breaking serializability. This nesting enables meta-circularity: a CAnATL's Value can itself be an AnATL containing a network structure.
 
 #### Base Types
 
@@ -405,6 +424,28 @@ This eliminates the need for any node-level sequence of past values. What was pr
 - No structure resembles history unless the model explicitly defines one
 
 There is no operation in RaCSTS that reads a prior value implicitly. Any operation that depends on a previous value must receive it explicitly as part of its Pulse arguments. This makes it impossible for a future reader to justify reintroducing a "window-like" structure under another name.
+
+#### Amnesiac Pulses: Handling High-Frequency Updates
+
+In high-frequency update scenarios (e.g., UI events, sensor streams, real-time data feeds), the "Old" value in an Observe Pulse may change faster than the network can propagate. This creates a race condition where:
+
+1. Observe Pulse arrives with `Old = V1`
+2. Network begins propagation
+3. Before propagation completes, another Observe Pulse arrives with `Old = V2` (where V2 is the value that would result from the first pulse)
+4. The second pulse's `Old` doesn't match the current value (which is still V1), causing rejection
+
+**Amnesiac Event:** When an Observe Pulse is rejected (Cur ≠ Old), the node's state transitions to `stale`. This is called an "amnesiac event" because the node "forgets" its current value's authority and seeks consensus.
+
+**Handling Strategy:**
+
+- **Batching:** Collect multiple Observe Pulses and batch them into a single propagation round. This reduces the window for race conditions.
+- **Debouncing:** For UI events, delay Observe Pulse creation until a quiescent period (e.g., user stops typing for 100ms).
+- **Sync Op:** When amnesiac events occur, the system automatically triggers Sync Op Relations to seek consensus across the network.
+- **T-ordering:** The T timestamp ensures that even if multiple Observe Pulses arrive out of order, they are processed in causal order.
+
+**Example:** A text input field updating at 60Hz generates Observe Pulses faster than propagation completes. The system batches these updates, and if a pulse is rejected (amnesiac event), the node transitions to `stale` and seeks consensus. The Sync Op mechanism ensures eventual consistency.
+
+This design makes high-frequency updates safe: rejected pulses don't corrupt state, and the system naturally converges through consensus.
 
 #### Link Relations: Internal Propagation
 
@@ -605,15 +646,15 @@ A quiescent state is reached when a full propagation round produces no accepted 
 **Preservation Requirements:**
 - All cell values must be preserved
 - All timestamps (T) must be preserved  
-- All topology (cells, links) must be preserved
-- Core P-REL structure (cells, links, causal markers) must round-trip identically
+- All topology (nodes, links) must be preserved
+- Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically
 
 **Metadata Guarantees:**
 - Metadata has zero guarantees regarding preservation during serialization cycles
 - Implementations may discard, modify, or ignore metadata
 - Metadata can be used for optimization (e.g., caching serialized representations) but must not be relied upon for correctness
 
-Pack and unpack are inverses for the core P-REL structure. A serialized network, when deserialized, is indistinguishable from the original in terms of cells, links, and causal markers. Metadata may differ.
+Pack and unpack are inverses for the core P-REL structure. A serialized network, when deserialized, is indistinguishable from the original in terms of nodes, links, relations, meta, and asOf. Metadata may differ.
 
 #### Scale Invariance
 
@@ -650,11 +691,13 @@ Meta-circularity is not a feature—it's a consequence of properly basic recursi
 
 RaCSTS achieves serializability through strict separation of concerns:
 
-**Blueprint (P-REL) vs. Runtime (Resolvers):** The P-REL contains only data—CAnATL structures, topology, links, and identifiers. It contains no executable code. At runtime, Node Resolvers and Relation Resolvers provide the implementations referenced by identifiers.
+**Blueprint (P-REL) vs. Runtime (Resolvers):** P-REL is independent of RaCSTS and contains nodes, links, relations, meta, and T. It contains only data—no executable code. At runtime, Node Resolvers and Relation Resolvers provide the implementations referenced by identifiers.
 
-**Opaque Design:** Both nodes and relations are opaque within the P-REL. P-REL stores CAnATL structures for cells, and Node Resolvers convert these to Node objects `{ value, state, meta, asOf }` at runtime. A relation is just an identifier. This opacity is what enables portability—the same P-REL can work with different resolver implementations in different environments.
+**Opaque Design:** Both nodes and relations are opaque within the P-REL. P-REL stores node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). Relations are implementation-dependent structures. This opacity is what enables portability—the same P-REL can work with different resolver implementations in different environments.
 
-**Serialization Boundary:** The serialization boundary is precisely the P-REL. Everything in the P-REL is serializable. Everything outside the P-REL (resolvers) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
+**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serializable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
+
+**Serialization Boundary:** The serialization boundary is precisely the P-REL structure (nodes, links, relations, meta, asOf). Literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations. Only the P-REL structure itself is guaranteed serializable. Everything outside the P-REL (resolvers, runtime state) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
 
 ### 7.2 The Toolkit Primitives
 
@@ -693,11 +736,13 @@ To implement RaCSTS, you must provide:
 #### P-REL Structure
 
 The P-REL must contain:
-- **Cells:** Map of cell IDs to CAnATL structures `[T, Tag, Value, Meta?]` where Value is the current authoritative state
-- **Links:** Map of link IDs to link specifications `[src-selector, tgt-selector, relation-id, args, meta, label?]`
-- **Topology:** The connections encoded in link src/tgt selectors (may use template patterns for compact representation)
-- **Causal Markers:** All T timestamps across all cells
-- **Metadata:** Annotations, link metadata, P-REL-level metadata
+- **Nodes:** Map of node IDs to node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation)
+- **Relations:** Map of relation IDs to relation structures (implementation-dependent, opaque references)
+- **Links:** Array of link specifications `[src-selector, tgt-selector, relation-id, args, meta, label?]`
+- **Meta:** P-REL-level metadata (ATL)
+- **asOf:** Current logical timestamp (T) for the P-REL
+
+**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's state may be WeakRefs (not serializable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serializable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
 
 Everything in the P-REL must be serializable to JSON or equivalent.
 
@@ -798,7 +843,7 @@ A RealNode (returned by Node Resolver) must provide:
 - **meta:** Metadata (ATL)
 - **asOf:** Timestamp (T) of last update
 
-Nodes are not CAnATL structures. In RaCSTS, nodes are `{ value, state, meta, asOf }` where value is opaque. In Suss, the value is ATL.
+Nodes in P-REL are `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). In RaCSTS, the value is opaque. In Suss, the value is ATL. P-REL is a sparse encoding—not a direct conversion of entire user objects. Much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque; only the P-REL structure is guaranteed serializable.
 
 The Node interface is the contract between the system and node implementations.
 
@@ -820,7 +865,7 @@ Pack and unpack operations must:
 - **Serialize CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, SyncedWall, Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
 - **Serialize Values:** Values are `AnATL | AnTL`, which serialize as nested JavaScript structures
 - **Preserve Structure:** Recursive ATL structure must round-trip perfectly
-- **Deterministic:** Core P-REL structure (cells, links, causal markers) must round-trip identically. Metadata has zero guarantees and may differ.
+- **Deterministic:** Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically. Metadata has zero guarantees and may differ.
 
 Serialization is not an afterthought—it is the fundamental capability of the system.
 
@@ -830,8 +875,8 @@ Serialization is not an afterthought—it is the fundamental capability of the s
 
 When an Op Relation executes:
 1. Receives current P-REL, operation arguments, and P-REL metadata
-2. Modifies P-REL structure (adds/removes cells, links)
-3. Creates Pulses `[T, op, ...args]` with T > any existing T in affected cells
+2. Modifies P-REL structure (adds/removes nodes, links)
+3. Creates Pulses `[T, op, ...args]` with T > any existing T in affected nodes
 4. Emits Pulses and delta-P-REL
 5. Returns updated P-REL metadata
 
@@ -1104,6 +1149,8 @@ Node A detects an Observe rejection when its local value is 10 but an incoming O
 
 This mechanism treats consensus not as heavyweight coordination, but as a natural consequence of the propagator network's fundamental mechanics. The RECV refinement ensures that fixed-point gossip emerges naturally from the system's core operation.
 
+**The Observe Guardrail:** For bidirectional relations (like the temperature converter example), developers might fear infinite loops. The Observe operation's "Old vs. New" check acts as an implicit circuit breaker: if `New === Old`, the operation is a no-op and propagation stops. This prevents circular dependencies from causing infinite propagation when values stabilize.
+
 **The Leader-Free Property:**
 
 Consensus in RaCSTS is leader-free because:
@@ -1114,6 +1161,46 @@ Consensus in RaCSTS is leader-free because:
 - **The network IS the coordinator**: Consensus emerges from the local interactions of propagator cells, not from centralized logic
 
 This is not bolt-on leader-free consensus—it's an emergent property of the propagator network's mathematical foundation.
+
+#### Non-Termination: Circuit Breakers and Max Rounds
+
+**Oscillation Detection:**
+
+In pathological cases, a network may oscillate between two states indefinitely. For example:
+- Node A computes value based on Node B
+- Node B computes value based on Node A
+- Each update triggers the other, creating an infinite loop: A → B → A → B...
+
+**Max Rounds Circuit Breaker:**
+
+RaCSTS includes a bounded execution mechanism to prevent infinite loops:
+
+- **MaxRounds:** A configuration parameter limiting the number of propagation rounds per logical time step
+- **Behavior:** When Round reaches MaxRounds, propagation halts for that time step
+- **Result:** The system returns partial state + evidence of progress (T-ordering shows forward progress even if quiescence isn't reached)
+- **Interpretation:** Partial state indicates the network may not converge without external constraints. Progress evidence (T advances) shows the system is making forward progress, not deadlocked.
+
+**What Bounded Execution Returns:**
+
+When MaxRounds is reached:
+1. **Partial State:** Current cell values at the point of halting
+2. **Progress Evidence:** T timestamps showing causal advancement
+3. **Round Count:** Evidence that MaxRounds was reached (not deadlock)
+4. **Interpretation:** "Progress evidence" vs "correct result" — bounded execution may halt before full quiescence, but T-ordering proves forward progress
+
+**Non-Convergence Scenarios:**
+
+- **Adversarial Cycles:** Networks with pathological dependency graphs (A = B + 1, B = A + 1) may not converge
+- **Conflicting Constraints:** Multiple relations enforcing incompatible constraints
+- **Oscillating Values:** Relations that don't satisfy monotonicity may cause oscillation
+
+**Handling Non-Convergence:**
+
+- **External Constraints:** Add external Observe Pulses to break cycles
+- **Relation Design:** Ensure relations satisfy monotonicity properties
+- **MaxRounds Tuning:** Increase MaxRounds for complex networks, but recognize that some networks may require external intervention
+
+**Important:** Circuit breakers are a bounded execution mechanism, not a correctness guarantee. They prevent infinite loops in adversarial graphs but do not guarantee quiescence. Progress evidence (T-ordering) shows the system is making forward progress, but bounded execution may halt before full quiescence is reached.
 
 
 ---
@@ -1142,17 +1229,21 @@ This is not bolt-on leader-free consensus—it's an emergent property of the pro
 
 **Type Safety:** Suss is strongly typed. TypeScript types for CAnATL, Value, Pulse, and all other entities ensure correctness at compile time. The type system enforces invariants that would be runtime errors in untyped implementations.
 
-**Serialization:** Suss can serialize P-REL (containing CAnATL structures) to JSON and deserialize JSON back to P-REL with identical CAnATL structures. The implementation demonstrates deterministic round-trip—serializing and deserializing a network produces an identical network.
+**Serialization:** Suss can serialize P-REL (containing nodes with ATL values, links array, relations, meta, and asOf) to JSON and deserialize JSON back to P-REL with identical structure. The implementation demonstrates deterministic round-trip—serializing and deserializing a network produces an identical network. Only the P-REL structure is guaranteed serializable; literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations.
 
 Serialization is not bolted on—it is fundamental to how Suss works.
 
 ### 8.3 Provided Networks
 
-**Shadow Object Propagator:** Suss provides a built-in network for shadow object models. This network:
-- Uses CAnATL to represent object state
+**Shadow Object Propagator:** Suss provides a built-in network for shadow object models. This network demonstrates sparse encoding:
+- Uses P-REL nodes with ATL values to represent only essential object state
+- Much of a node's runtime state may be WeakRefs (not serializable), but literals are opaque
+- Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serializable
 - Maintains private state for dirty propagation logic (relations maintain their own temporal context)
 - Provides dirty propagation (manual triggering)
 - Bridges imperative JavaScript code with the propagator model
+
+This illustrates that P-REL is not a direct conversion of entire user objects—it is a sparse encoding of only what needs to be communicated. The tagged literal structure allows efficient representation where tags dispatch to the appropriate interpretation.
 
 **Integration Patterns:** Suss demonstrates how to bridge imperative code and the propagator model:
 - Convert JavaScript objects to CAnATL structures
@@ -1164,9 +1255,9 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 
 ### 8.4 Production Considerations
 
-**Performance:** Performance is a function of connectivity, not network size. Networks with high connectivity (many links per cell) require more propagation rounds to reach quiescence. Propagation respects causal ordering across rounds (T-ordering), but within a single round, many nodes can update in parallel as long as they're not causally dependent. Highly connected cells create bottlenecks because they require more rounds to reach quiescence. Sparse networks with low connectivity can be very fast even with many cells.
+**Performance:** Performance is a function of connectivity, not network size (e.g., O(e) where e is the number of active edges). Networks with high connectivity (many links per node) require more propagation rounds to reach quiescence. Propagation respects causal ordering across rounds (T-ordering), but within a single round, many nodes can update in parallel as long as they're not causally dependent. Highly connected nodes create bottlenecks because they require more rounds to reach quiescence. Sparse networks with low connectivity can be very fast even with many nodes.
 
-**Serialization:** Serialization can be optimized by caching serialized representations in metadata. However, metadata has zero guarantees regarding preservation during serialization cycles—implementations may discard, modify, or ignore metadata. Only the core P-REL structure (cells, links, causal markers) is guaranteed to round-trip.
+**Serialization:** Serialization can be optimized by caching serialized representations in metadata. However, metadata has zero guarantees regarding preservation during serialization cycles—implementations may discard, modify, or ignore metadata. Only the core P-REL structure (nodes, links, relations, meta, asOf) is guaranteed to round-trip. Literals within ATL values are opaque and may contain non-serializable references (e.g., WeakRefs) in runtime implementations.
 
 **Storage:** CAnATL cells contain only authoritative state—no history, window, or context at the node level. Relations that require temporal context (smoothing, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cells.
 
@@ -1182,6 +1273,56 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 - Transmit P-REL subgraphs as values
 - Provide environment-specific resolvers at each boundary
 - Use Pulse exchange for cross-boundary propagation
+
+#### Performance & Complexity
+
+**CAnATL Overhead:**
+
+The CAnATL wrapper adds structure overhead compared to plain in-memory state objects:
+
+- **Memory:** Each CAnATL cell requires `[T, Tag, Value, Meta?]` structure. For a simple value (e.g., number 42), this adds:
+  - T: 3 numbers (Epoch, SyncedWall, Idx) ≈ 24 bytes
+  - Tag: string (variable, typically 10-50 bytes)
+  - Value: the actual data (minimal for primitives)
+  - Meta: optional ATL (variable, often empty)
+  - **Total overhead:** ~50-100 bytes per cell for simple values, compared to ~8 bytes for a plain number
+
+- **Computation:** Materializing a Value through interpretation adds one function call per cell read. For simple interpretations (identity function), this is negligible. For complex interpretations, the cost is the interpretation function itself, not the CAnATL structure.
+
+**Serialization Overhead:**
+
+Serialization adds JSON encoding overhead:
+
+- **Size:** JSON serialization of a CAnATL cell is typically 2-3x the in-memory size due to:
+  - JSON string encoding
+  - Structure metadata (brackets, commas, keys)
+  - String representation of numbers and tags
+- **Time:** Serialization requires traversing the entire P-REL structure. For a network with N nodes and L links:
+  - **Time complexity:** O(N + L) — linear in network size
+  - **Space complexity:** O(N + L) — linear in network size
+  - **Practical performance:** For networks with <1000 nodes, serialization typically takes <10ms in JavaScript
+
+**Relative to Standard State Objects:**
+
+Compared to standard in-memory state objects (e.g., plain JavaScript objects, Redux stores):
+
+- **Memory:** CAnATL adds ~50-100 bytes overhead per cell. For 1000 cells, this is ~50-100KB overhead.
+- **Read performance:** Materialization adds one function call per read. Negligible for simple values, significant only for complex interpretations.
+- **Write performance:** Observe operations require CAS checks (Cur == Old comparison). This adds one equality check per write, typically negligible.
+- **Serialization:** Standard state objects require custom serialization logic. CAnATL serialization is automatic but adds JSON encoding overhead (2-3x size increase).
+
+**Bottlenecks:**
+
+- **Connectivity:** The primary performance factor is connectivity (links per node), not network size. A network with 10,000 nodes and 10,000 links (sparse) is faster than a network with 100 nodes and 10,000 links (dense).
+- **Propagation rounds:** Each round requires O(L) relation evaluations. High connectivity increases rounds to quiescence.
+- **Serialization:** Large networks (>10,000 nodes) may take >100ms to serialize. Use incremental serialization or subgraph extraction for large networks.
+
+**Optimization Strategies:**
+
+- **Metadata caching:** Cache serialized representations in metadata (zero guarantees for preservation).
+- **Batching:** Collect multiple Observe Pulses before propagation to reduce round count.
+- **Subgraph extraction:** Serialize only relevant subgraphs for transmission.
+- **Lazy materialization:** Materialize Values only when needed, not on every read.
 
 **Sharp Edges and Limitations:**
 - Deep recursive ATL structures can cause stack overflow (JavaScript recursion limits)
@@ -1206,11 +1347,11 @@ Suss handles circular dependencies naturally. Networks with cycles propagate unt
 
 #### Serialization: Pause and Resume
 
-Suss can serialize a network's complete state (P-REL) to JSON at any point. This serialized network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialized to resume exactly where it left off. The network's topology, cell states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
+Suss can serialize a network's complete state (P-REL) to JSON at any point. This serialized network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialized to resume exactly where it left off. The network's topology, node states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
 
 #### Snapshot Files: Bug Reports with Network State
 
-From §1.0's promise: A bug report includes a P-REL snapshot file. In production, when an error occurs, Suss can capture the complete network state at that moment. This snapshot includes all cell values, the propagation graph, and causal history. Metadata may be included but is not guaranteed to be preserved. During debugging, this snapshot can be loaded into a development environment, recreating the exact network state from production. Developers can step through propagation, inspect cell values, modify relations, and verify fixes—all without needing production logs or trying to reproduce the error state manually.
+From §1.0's promise: A bug report includes a P-REL snapshot file. In production, when an error occurs, Suss can capture the complete network state at that moment. This snapshot includes all node values (as ATL structures), the propagation graph (links array), and causal history (asOf timestamps). Metadata may be included but is not guaranteed to be preserved. During debugging, this snapshot can be loaded into a development environment, recreating the exact network state from production. Developers can step through propagation, inspect node values, modify relations, and verify fixes—all without needing production logs or trying to reproduce the error state manually.
 
 **Section Total: ~1,100 words**
 
@@ -1290,37 +1431,67 @@ Each solution reveals the next missing object. The journey continues.
 
 ### Appendix A: Glossary
 
+**Amnesiac Event:** When an Observe Pulse is rejected (Cur ≠ Old), the node's state transitions to `stale`. The node "forgets" its current value's authority and seeks consensus through Sync Op Relations.
+
+**ATL (Associative Tagged Literal):** Recursive associative structure `Dictionary<ATL | TL | TL[]>`. Foundation for representing arbitrary structured data. Can contain nested dictionaries, tagged literals, or arrays of tagged literals.
+
 **CAnATL (Causal Annotated Associative Tagged Literal):** The fundamental cell type in RaCSTS. Structure: `[T, Tag, Value, Meta?]` containing logical timestamp, semantic tag, current authoritative value, and optional metadata (no preservation guarantees). Cells contain only authoritative state—no history, window, or context at the node level.
 
 **Cell:** A CAnATL structure representing a unit of state in a propagator network. Cells are the "variables" that propagators reconcile.
 
-**Change Set:** A collection of operations (Pulses) applied to cells. Used by toolkit primitives to batch operations.
+**Change Set:** A collection of operations (Pulses) applied to cells. Used by toolkit primitives to batch operations for efficient application.
 
-**Interpretation:** A function that projects a CAnATL to a materialized Value. Defines how a cell's operation history becomes a concrete value.
+**Epoch:** Logical counter component of T timestamp. Provides primary causal ordering. The "most significant bit" of the timestamp.
 
-**Lineage:** The provenance and authority level of a cell's value. Four types in hierarchy: `'observed'` (Op set—always wins), `'consensus'` (Sync completed—beats stale and derived), `'stale'` (Op mismatch detected, seeking consensus—beats derived), `'derived'` (Link computed—lowest authority). Authority: observed > consensus > stale > derived.
+**Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearizability even outside individual P-RELs.
 
-**Link Relation:** Internal propagation logic between cells. Signature: `link(srcNode: RealNode, tgtNode: RealNode, meta) -> [srcValue, tgtValue, meta']`. Receives full node objects as input, returns values as output. Maintains relationships.
+**Hybrid Epoch Clock (T):** Logical timestamp structure `[Epoch, SyncedWall, Idx]` where Epoch is logical counter, SyncedWall is NTP-synchronized wall time, and Idx disambiguates concurrent events with fractional refinement.
+
+**Interpretation:** A function that projects a CAnATL to a materialized Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
+
+**Lineage (State):** The provenance and authority level of a cell's value. Four types in hierarchy: `'observed'` (Observe accepted—always wins), `'consensus'` (Sync completed—beats stale and derived), `'stale'` (Observe rejected, seeking consensus—beats derived), `'derived'` (Link computed—lowest authority). Authority: observed > consensus > stale > derived.
+
+**Link Relation:** Internal propagation logic between cells. Signature: `link(srcNode: RealNode, tgtNode: RealNode, meta) -> [srcValue, tgtValue, meta']`. Receives full node objects as input, returns values as output. Maintains relationships between cells.
 
 **Link Selector:** Pattern-based specification for source/target cells in links. Format: `type:id` or `type:constraint`. Supports wildcards (`node:sensor:*`), metadata paths (`node:meta.dirty`), and template variables (`{{id}}`). Enables template links and dynamic graph assembly.
 
-**Monotonicity:** Property that timestamps always increase. Operations are only accepted if they advance logical time. Ensures forward progress.
+**MaxRounds:** Configuration parameter limiting propagation rounds per logical time step. Circuit breaker preventing infinite loops. When reached, returns partial state + progress evidence.
 
-**Op Relation:** External operation that introduces entropy. Signature: `op(P-REL, args, meta) -> [delta-P-REL, Pulse[], meta']`. Entry point for change.
+**Meta-Circularity:** Property that a CAnATL cell's Value can itself be an AnATL containing a network structure. Networks can contain networks, and the same propagation mechanics apply at all scales.
 
-**P-REL (Parallel Relational Layer):** The serializable blueprint of a network containing topology, state, links, and causal markers.
+**Monotonicity:** Property that timestamps always increase. Operations are only accepted if they advance logical time (T_new > T_current). Ensures forward progress and prevents time-travel.
 
-**Pulse:** An operation that updates a cell. Structure: `[T, op, ...args]`. The "currency" of change in the network.
+**Node:** In P-REL, a node structure `{ value, state, meta, asOf }`. P-REL is independent of RaCSTS and uses nodes, not CAnATL cells directly.
 
-**Standard Higher-Order Relations:** Six core toolkit primitives: `mark` (directional truth propagation), `linear` (bidirectional numeric constraints), `map` (functional transformation with conflict resolution), `constrain` (bidirectional constraint solver), `reduce` (N→1 aggregation), `join` (N→M relational knitting). These are standard primitives, not optional extensions.
+**Observe:** The fundamental operation for introducing external entropy. Structure: `[T, ObserveTag, [Path, Old, New], Meta?]`. Compare-and-swap semantics are intrinsic—accepted only if Cur == Old, otherwise triggers amnesiac event. There is no generic "Set" operation.
 
-**Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serializing individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
+**Op Relation:** External operation that introduces entropy. Signature: `op(P-REL, args, meta) -> [delta-P-REL, Pulse[], meta']`. Entry point for external change.
+
+**P-REL (Parallel Relational Layer):** The serializable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
+
+**Pulse:** An operation that updates a cell. Structure: `[T, Tag, Args, Meta?]`. The "currency" of change in the network.
 
 **Quiescence:** State where no further propagation occurs. All cells are stable, no operations accepted. The "solution" to the constraint network.
 
-**Scale Invariance:** Property that the same primitives work at all scales—single cells, subnetworks, whole networks, meta-networks.
+**RaCSTS (Relational and Causal State Transition System):** Pronounced "Rackets." The specification for serializable propagator networks. Grounded in State Transition Systems theory.
 
-**Observe:** The fundamental operation for introducing external entropy. Structure: `[T, ObserveTag, [Path, Old, New], Meta?]`. This single construct is both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic—the Pulse is accepted only if the cell's current value equals Old, otherwise it triggers an amnesiac event or refinement (e.g., Sync). There is no generic "Set" operation—all external entropy enters as Observe operations.
+**Scale Invariance:** Property that the same primitives work at all scales—single cells, subnetworks, whole networks, meta-networks. No special handling required for nested networks.
+
+**Standard Higher-Order Relations:** Six core toolkit primitives: `mark` (directional truth propagation), `linear` (bidirectional numeric constraints), `map` (functional transformation with conflict resolution), `constrain` (bidirectional constraint solver), `reduce` (N→1 aggregation), `join` (N→M relational knitting). These are standard primitives, not optional extensions.
+
+**State Transition System (STS):** The theoretical grounding for CAnATL. CAnATL is a reified trace of an STS, where each Pulse is a transition and T provides causal ordering.
+
+**Suss:** The reference TypeScript implementation of RaCSTS. Demonstrates practical application and proves the specification is implementable.
+
+**Sync Op:** Specialized Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
+
+**Sway Rule:** When a node receives a remote timestamp T_remote, it updates its local timestamp T_local to maintain strict monotonicity: `T_local = max(T_local, T_remote)`. Ensures global linearizability without a central master clock.
+
+**T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serializability.
+
+**Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serializing individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
+
+**Value:** Union type `AnATL | AnTL`. The type of "a value" in the system—any serializable data with optional semantic tags and annotations.
 
 ### Appendix B: Complete Type Definitions
 
@@ -1359,12 +1530,27 @@ type Pulse = [T, Tag, Args, Meta?] // T: timestamp, Tag: operation identifier, A
 type ObservePulse = [T, ObserveTag, [Path, Old, New], Meta?] // Fundamental operation: compare-and-swap semantics intrinsic
 type ChangeSet = Pulse[]
 
-// P-REL Structure
+// P-REL Structure (independent of RaCSTS)
 interface PREL {
-  cells: { [id: string]: CAnATL }
-  links: { [id: string]: Link }
+  nodes: { [id: string]: Node }
+  relations: { [id: string]: Relation }
+  links: Link[]  // Array of links, not object
+  meta: ATL
+  asOf: T  // Current logical timestamp
+}
+
+// Node structure in P-REL
+interface Node {
+  value: ATL  // ATL, not Value - tagged literals dispatch on tag for interpretation
+  asOf: T
+  lineage: 'observed' | 'consensus' | 'stale' | 'derived'
   meta: ATL
 }
+
+// Relation in P-REL (implementation-dependent)
+// Relations are opaque - their structure depends on the implementation
+// For serialization, relations are recreated from metadata or relation definitions
+type Relation = unknown  // Implementation-dependent structure
 
 interface Link {
   srcSelector: string
@@ -1377,7 +1563,7 @@ interface Link {
 
 // Node interface for Link Relations (receives full node context)
 // In RaCSTS: value is opaque. In Suss implementation: value is ATL
-interface Node {
+interface RealNode {
   value: Value  // Opaque in RaCSTS, ATL in Suss
   state: 'observed' | 'consensus' | 'stale' | 'derived'
   meta: Meta
@@ -1393,17 +1579,172 @@ type OpRelation = (
 
 // Link Relation: Internal propagation logic between cells
 type LinkRelation = (
-  srcNode: Node,
-  tgtNode: Node,
+  srcNode: RealNode,
+  tgtNode: RealNode,
   meta: Meta
 ) => [Value, Value, Meta]
 ```
 
 ### Appendix C: Complete Example
 
-[Detailed walkthrough of building a network with CAnATL, from defining cells through propagation to serialization]
+#### Bidirectional Celsius/Fahrenheit Converter
 
-(To be expanded based on specific example chosen—temperature conversion network, shopping cart network, or constraint solver network)
+This example demonstrates how RaCSTS bridges theory to code with a concrete, minimal implementation. The example shows how the standard `linear` higher-order relation makes bidirectional unit conversion trivial.
+
+**The Linear Relation:**
+
+Recall from Section 6.3.5 that `linear` is a bidirectional numeric relation that solves linear relationships of the form `y = a + bx`. Given this form, unit conversions become straightforward parameterization.
+
+**The Conversion Formula:**
+
+The relationship between Celsius (C) and Fahrenheit (F) is:
+```
+F = (9/5) × C + 32
+```
+
+Rewriting in the linear form `y = a + bx`:
+```
+F = 32 + (9/5) × C
+```
+
+Where:
+- `a = 32` (the intercept)
+- `b = 9/5` (the slope)
+- `x = C` (source value)
+- `y = F` (target value)
+
+**The Relation Definition:**
+
+Since `linear` is a higher-order relation, it must be instantiated with parameters to create a concrete relation. The form is `linear(a, b) // y = a + bx`:
+
+```typescript
+// Higher-order relation: linear(a, b) returns a LinkRelation
+// For Celsius/Fahrenheit: F = 32 + (9/5) × C
+const tempRelation = linearRelation(32, 1.8)  // a=32, b=9/5=1.8
+```
+
+**The P-REL Structure:**
+
+P-REL is independent of RaCSTS and contains nodes, links, relations, meta, and T:
+
+```typescript
+// P-REL structure
+const temperatureNetwork: PREL = {
+  nodes: {
+    "celsius": {
+      value: { "temperature": [["celsius", 25]] },  // ATL structure
+      asOf: T0,
+      lineage: "observed",
+      meta: {}
+    },
+    "fahrenheit": {
+      value: { "temperature": [["fahrenheit", 77]] },  // ATL: tagged literal dispatches on "temperature"
+      asOf: T0,
+      lineage: "derived",
+      meta: {}
+    }
+  },
+  relations: {
+    "temp": linearRelation(32, 1.8)  // Higher-order relation instantiated with parameters
+  },
+  links: [  // Array of links, not object
+    {
+      srcSelector: "node:celsius",
+      tgtSelector: "node:fahrenheit",
+      relationId: "temp",  // References relation in relations map
+      args: [],  // No args - parameters are in the relation definition
+      meta: {},
+      label: "celsius-to-fahrenheit"
+    }
+  ],
+  meta: {},
+  asOf: T0  // Current logical timestamp
+}
+```
+
+**How It Works:**
+
+1. **Forward (C → F):** When the Celsius cell updates to a new value C_new:
+   - The `linear` relation computes: `F_new = 32 + (9/5) × C_new`
+   - Updates the Fahrenheit cell with the computed value
+
+2. **Backward (F → C):** When the Fahrenheit cell updates to a new value F_new:
+   - The `linear` relation performs the inverse: `C_new = (5/9) × (F_new - 32)`
+   - Updates the Celsius cell with the computed value
+
+**The Triviality:**
+
+Given the form `linear(a, b) // y = a + bx`, the Celsius/Fahrenheit converter is simply:
+- One relation instantiation: `linearRelation(32, 1.8)`
+- One link with no args (the link references the relation ID)
+- No custom code required
+
+The link has no arguments because the parameters are captured when instantiating the higher-order relation. This is the pattern for all higher-order relations: instantiate with parameters, reference by ID in links.
+
+The bidirectional nature is automatic—the `linear` relation handles both directions. If you change Celsius, Fahrenheit updates. If you change Fahrenheit, Celsius updates. The relation is the constraint, not a directional function.
+
+**Observe Operations:**
+
+To update the temperature, emit Observe Pulses:
+
+```typescript
+// Update Celsius to 30°C
+const observeCelsius: ObservePulse = [
+  T1,
+  "observe",
+  ["celsius", 25, 30],  // [Path, Old, New]
+  {}
+]
+
+// The network automatically computes F = 32 + (9/5) × 30 = 86°F
+// The Fahrenheit cell updates via the linear relation
+```
+
+**Serialization:**
+
+The entire network serializes to JSON:
+
+```json
+{
+  "nodes": {
+    "celsius": {
+      "value": { "temperature": [["celsius", 30]] },
+      "asOf": [0, 1704067200, 1.0],
+      "lineage": "observed",
+      "meta": {}
+    },
+    "fahrenheit": {
+      "value": { "temperature": [["fahrenheit", 86]] },
+      "asOf": [0, 1704067200, 1.05],
+      "lineage": "derived",
+      "meta": {}
+    }
+  },
+  "relations": {
+    "temp": "linear(32, 1.8)"  // Serialized as relation definition, recreated at deserialization
+  },
+  "links": [
+    {
+      "srcSelector": "node:celsius",
+      "tgtSelector": "node:fahrenheit",
+      "relationId": "temp",
+      "args": [],
+      "meta": {},
+      "label": "celsius-to-fahrenheit"
+    }
+  ],
+  "meta": {},
+  "asOf": [0, 1704067200, 1.05]
+}
+```
+
+Note: Relations are implementation-dependent structures in the runtime PREL. For serialization, they are stored as relation definitions (e.g., `"linear(32, 1.8)"`) and recreated when deserialized by instantiating the higher-order relation with the stored parameters. Node values are ATL structures where tagged literals dispatch on tag for interpretation. This enables sparse encoding—only essential state is serialized, not full object representations.
+
+This serialized network can be transmitted, stored, or resumed—the network is a value.
+
+**Key Insight:**
+
+The `linear` relation demonstrates how RaCSTS makes common patterns trivial. Unit conversions, coordinate transformations, and linear constraints all reduce to parameterized links. The relation handles bidirectionality, inverse computation, and propagation automatically. This is the power of properly basic data structures combined with standard higher-order relations.
 
 ### Appendix D: Comparison with Related Work
 
