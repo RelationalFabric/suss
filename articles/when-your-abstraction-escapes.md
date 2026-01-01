@@ -14,8 +14,6 @@ But this time, something different happened. This time, the abstraction didn't j
 
 This is the story of that journey.
 
----
-
 ### The Thinking Partner: Why This Journey Was Possible
 
 Before we dive into the technical details, I need to introduce my thinking partner: Google Gemini.
@@ -34,8 +32,6 @@ This wasn't just a chat bot. This was a thinking partner–someone who could eng
 
 The conversation that follows shows how that partnership worked in practice.
 
----
-
 ### The Starting Point: The ADR That Started It All
 
 Howard needed fast object hashing. The goal was clear: eliminate the Logical Tax by making proofs persistent. If we could hash objects deterministically and cache those hashes, we could avoid re-verifying claims at every boundary.
@@ -49,8 +45,6 @@ The intent was simple: make the hashing structure-independent. Instead of hardco
 It seemed like a straightforward refactor. But as I tried to write it, I hit a wall. The ADR assumed you could enumerate properties, compute per-key hashes, and compose them. But what if the data came from a legacy SQL system as key-value rows? What if it was an Immutable.js structure? What if someone mutated the object outside our control? The structure-aware approach required knowing the container type upfront, which broke the entire premise of Canon's universal API.
 
 The specific frustration was this: I couldn't write a clean ADR that described fast hashing without also describing how to handle every possible container type. The abstraction was leaking.
-
----
 
 ### The First Realisation: Semantic Equivalence
 
@@ -71,8 +65,6 @@ This was the shift: from structural hashing to semantic hashing. We weren't just
 As Gemini put it in our conversation: "You've hit the nail on the head. That is the 'Aha!' moment of the Relational Fabric."
 
 > We realised we were solving a different problem than we thought.
-
----
 
 ### The Spanner in the Works: Runtime Type Alignment
 
@@ -95,8 +87,6 @@ This led to a series of realisations about canons, axioms, and protocols. We ste
 > **The key insight:** "We don't need a constructor, we need a canonical object. We have those already: the runtime Canon definition."
 
 This was the moment when canons stopped being just definitions and started being the actual identity mechanism. **The canon definition *is* the constructor.** We were moving from structural hashing to ontological recognition.
-
----
 
 ### The Affordances Pivot: When the Metaphor Had to Ground
 
@@ -146,8 +136,6 @@ Gemini's answer was definitive: "We have discovered a **new primitive**, but it 
 
 > This wasn't just a refactor anymore. This was something bigger.
 
----
-
 ### The Separation: When the Abstraction Demanded Its Own Lifecycle
 
 > The critical moment came when I realised: "I think that the testing alone would swamp canon with somewhat irrelevant code."
@@ -171,8 +159,6 @@ It neatly encapsulated what the library does: it **susses** the state of an arbi
 We also realised this should be a toolkit, not a framework. The API became four functions: `append`, `compact`, `reduce`, `propagate`. This wasn't about managing state–it was about managing the calculus of change.
 
 The transition was clear: Howard (claims) → Canon (protocols) → Runtime type alignment → Protocols on canons → Fast type alignment → Structural object change detection → Propagator networks. Each step revealed the next layer that needed to exist.
-
----
 
 ### The Final Evolution: From Change Sets to Serialisable Networks
 
@@ -222,8 +208,6 @@ Collection semantics opened up optimisation opportunities that weren't possible 
 
 This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state–they were part of the state itself.
 
----
-
 ### The Departure: From Pipes to Filters
 
 As we refined the model, another subtle but critical shift occurred. Initially, we assumed that pulses would propagate directly to nodes–links were just "pipes" that carried pulses from one node to another. But when we defined Link Relations, we departed from this model entirely.
@@ -265,8 +249,6 @@ This four-layer distinction matters because:
 - RECV is the serialisable message format
 
 The separation between computation (relations), conditional updates (implementation), communication generation (DELTA), and transmission (system) is what makes RaCSTS both deterministic and distributable.
-
----
 
 ### Internal Propagation: Round-Based Coordination
 
@@ -332,8 +314,6 @@ DELTA collects changes since the last DELTA execution:
 6. Return a RECV with the change-dictionary
 
 This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–is what makes RaCSTS both locally deterministic and globally convergent. The iterative propagation rounds ensure each P-REL reaches quiescence, while RECV/SYNC ensures multiple P-RELs converge to consensus.
-
----
 
 ### The Clock Evolution: From Datetime to Vector to Hybrid Logical Clock
 
@@ -424,8 +404,6 @@ The danger was real. We could have gotten lost in abstraction. We could have tra
 But the value of following insights was equally real. Sometimes the abstraction knows where it needs to go. Sometimes you have to trust the process.
 
 The balance between "infrastructure of suspicion" and "fabric of proof" extends to how we think about our own abstractions. We can be suspicious of every new layer, every new primitive. Or we can trust that if we're rigorous about the process, if we test our assumptions, if we're willing to pivot when we discover we're solving a different problem, we'll find the gold.
-
----
 
 ### What's Next: From Discovery to Implementation
 
