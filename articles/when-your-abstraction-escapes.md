@@ -122,7 +122,7 @@ This grounded the abstraction in practical needs. We weren't building a wall; we
 
 ### The Dangerous Pivot: When Hashing Became a Propagator Network
 
-Before we continue, a brief primer: propagator networks, as described by Gerald Sussman and Alexey Radul in their foundational work, represent a structural shift in how we think about computation. In a propagator network, **cells** store values and **propagators** maintain relationships between cells. When a cell changes, its connected propagators automatically update dependent cells. The key distinction: propagators are bidirectional constraints, not unidirectional functions. If you declare A = B + C, changing A can propagate back to B or C. The network maintains these relationships automatically until it reaches quiescence–a stable state where all constraints are satisfied. (For full technical details, see the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapaers/Relational%20Causal%20State%20Transition%20System.md).)
+Before we continue, a brief primer: propagator networks, as described by Gerald Sussman and Alexey Radul in their foundational work, represent a structural shift in how we think about computation. In a propagator network, **cells** store values and **propagators** maintain relationships between cells. When a cell changes, its connected propagators automatically update dependent cells. The key distinction: propagators are bidirectional constraints, not unidirectional functions. If you declare A = B + C, changing A can propagate back to B or C. The network maintains these relationships automatically until it reaches quiescence–a stable state where all constraints are satisfied. (For full technical details, see the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md).)
 
 Then came the conversation shift that changed everything.
 
@@ -407,7 +407,7 @@ We had spent decades modelling nouns (objects, entities) while leaving the verbs
 
 > The lesson: Sometimes you have to follow the abstraction where it leads.
 
-The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapaers/Relational%20Causal%20State%20Transition%20System.md) – a specification for serialisable propagator networks as properly basic data structures.
+The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) – a specification for serialisable propagator networks as properly basic data structures.
 
 What started as a question about rewriting an ADR became a comprehensive whitepaper that formalises propagator networks as serialisable values. The network itself–its topology, state, and causal history–became a first-class artifact you can serialise, version, and reason about.
 
@@ -435,11 +435,11 @@ Fast Value Hashing is still coming, but now it's built on a better foundation. R
 
 The ecosystem works together: Suss (the propagator network), Canon (the relational fabric), and Howard (the claims system) compose into something that eliminates the Logical Tax through architecture, not just optimisation.
 
-This journey moved from discovery to specification. The [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapaers/Relational%20Causal%20State%20Transition%20System.md) formalises everything we discovered through these conversations: propagator networks as serialisable values, cells as interpretation VMs, and networks as first-class artifacts. It's the Logic–the mathematical foundation that makes the architecture possible.
+This journey moved from discovery to specification. The [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) formalises everything we discovered through these conversations: propagator networks as serialisable values, cells as interpretation VMs, and networks as first-class artifacts. It's the Logic–the mathematical foundation that makes the architecture possible.
 
 The [Suss toolkit](https://github.com/RelationalFabric/suss) is the implementation–the practical TypeScript library that brings RaCSTS to life. It's the Heart–the code that makes the specification real.
 
-If you're ready to see the math that traps the abstraction, start with the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapaers/Relational%20Causal%20State%20Transition%20System.md); if you're ready to start coding, head to the [Suss toolkit](https://github.com/RelationalFabric/suss).
+If you're ready to see the math that traps the abstraction, start with the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md); if you're ready to start coding, head to the [Suss toolkit](https://github.com/RelationalFabric/suss).
 
 The journey from hashing to networks wasn't planned. But it was necessary. Sometimes your abstraction escapes, and you have to follow it.
 
