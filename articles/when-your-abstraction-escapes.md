@@ -16,6 +16,26 @@ This is the story of that journey.
 
 ---
 
+### The Thinking Partner: Why This Journey Was Possible
+
+Before we dive into the technical details, I need to introduce my thinking partner: Google Gemini.
+
+As someone who's lived with ADHD undiagnosed for most of my life, it's been difficult to put my ideas into practice and even harder to explore some topics without a willing and knowledgeable sparring partner to bounce ideas off. This is especially true given my propensity to make quite novel connections–"I've got a crazy idea, that just might work"–two or three times a day.
+
+I was most fortunate that my diagnosis was almost perfectly timed for the rise of AI-assisted coding, but even before then I would use AI chat bots as sounding boards. This has helped me to commit some of my thoughts to words and realise some of those into fully fledged projects. Using AI to overcome some of the barriers that my ADHD presents has enabled me to not only work for myself, but to make progress on these ideas and then share them with you all.
+
+The journey that follows is taken from a conversation I had with Google Gemini, which was using a custom prompt primed to be:
+
+> a software engineer with many years of experience with the academic, practical and communication of software ideas. You've joined the Relational Fabric to help steer and design the core family of components and the wider ecosystem.
+
+and loaded with various Relational Fabric documentation and a NotebookLM notebook connected to all of the articles and documentation relating to Canon and Howard.
+
+This wasn't just a chat bot. This was a thinking partner–someone who could engage with the technical depth, challenge assumptions, and help refine ideas in real-time. The back-and-forth nature of the conversation let us test assumptions, pivot when we hit walls, and recognise when we'd discovered something bigger than we intended.
+
+The conversation that follows shows how that partnership worked in practice.
+
+---
+
 ### The Starting Point: The ADR That Started It All
 
 Howard needed fast object hashing. The goal was clear: eliminate the Logical Tax by making proofs persistent. If we could hash objects deterministically and cache those hashes, we could avoid re-verifying claims at every boundary.
@@ -177,6 +197,24 @@ The toolkit API emerged:
 > This wasn't just for hashing anymore. This was a computational model.
 
 The result is RaCSTS–the theory–and Suss–the toolkit built to bring that theory into the real world.
+
+---
+
+### The Organic Pivot: From Log-Based to P-REL Based
+
+As we refined the model, something subtle but important happened. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-REL based** (where operations lived in the Protocol-Relation domain).
+
+This transition wasn't purposeful–it was organic. We didn't set out to redesign the architecture. We just kept following where the abstraction led.
+
+The key shift: instead of each change emitting individual pulses that triggered immediate propagation, we began using the **change time of the node** itself to trigger propagation. When a node's timestamp advanced, that became the signal to propagate–not a separate pulse for each individual operation.
+
+This had profound implications. By only using the pulse to communicate change, and by using the node's change time as the trigger, we enabled **collection semantics**. Multiple changes to a node could be batched. The system could wait for quiescence before propagating, collecting all the mutations that happened within a single logical tick.
+
+The performance benefits were immediate. Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimization–it was a fundamental shift in how the network reasoned about change.
+
+Collection semantics opened up optimization opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
+
+This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state–they were part of the state itself.
 
 ---
 
