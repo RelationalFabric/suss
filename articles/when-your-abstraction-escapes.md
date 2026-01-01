@@ -268,6 +268,129 @@ The separation between computation (relations), conditional updates (implementat
 
 ---
 
+### Internal Propagation: Round-Based Coordination
+
+It's crucial to understand that **internal propagation** within a single P-REL is fundamentally different from **communication** between P-RELs. Internal propagation uses the node's change time (timestamp) as the coordination mechanism:
+
+**Each Propagation Round:**
+
+1. **Change Detection**: Look for nodes changed since last round (nodes whose timestamp advanced)
+2. **Link Identification**: For each changed node, identify all links where the source selector matches
+3. **Relation Resolution**: Resolve the relation function for each matched link
+4. **Relation Execution**: Run the relation: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`
+5. **Conditional Update**: Update the target node only if needed (using the round-specific T), which advances the node's timestamp
+6. **P-REL T Update**: Update the P-REL's global timestamp
+7. **Iteration Check**: If `round < max_rounds` and nodes were updated, repeat from step 1
+
+This continues until quiescence–a round where no nodes are updated. The method is deterministic and monotonic: nodes only advance forward in time, and the system always makes progress toward a fixed point. The key insight is using the node's change time as the signal for what needs to propagate, rather than maintaining explicit change lists or event queues.
+
+**Why This Matters:**
+
+Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is separate from the communication layer that handles synchronization between different P-REL instances.
+
+---
+
+### Communication Between P-RELs: RECV and SYNC
+
+While internal propagation handles consistency within a P-REL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RELs. This is the gossip layer that enables distributed convergence.
+
+**On OBSERVE:**
+
+When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RELs, seeking consensus.
+
+**On SYNC:**
+
+When a SYNC pulse arrives, the system checks the quorum:
+
+- If the count of keys equals the target quorum:
+  - If the value is `stale`: If quorum is met for a value, set it as `consensus`; else increase the required count and return the incoming SYNC with the new count
+  - Else: Do nothing (already decided)
+- Else:
+  - If you haven't voted: Add your vote to the original SYNC and return it
+  - Else: Return the original SYNC unchanged
+
+This creates a "rolling snowball" effect where the SYNC accumulator grows as it propagates through the network until consensus is reached.
+
+**On RECV:**
+
+RECV is the communication entrypoint. For each node in the incoming dictionary:
+
+1. Get the last T for that node from the vector clock
+2. Filter pulses for novelty: `T_incoming > T_last`
+3. Keep a copy of the filtered pulses in the P-REL meta (merge with append)
+4. Process each pulse
+
+**DELTA:**
+
+DELTA collects changes since the last DELTA execution:
+
+1. Collect the changes since last DELTA
+2. Construct a `nodeId: Pulse[]` dictionary with your changes
+3. Merge the other node's pulses from the meta (set in RECV)
+4. Clear the meta recorded pulses
+5. Update the last delta time in the meta
+6. Return a RECV with the change-dictionary
+
+This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–is what makes RaCSTS both locally deterministic and globally convergent. The iterative propagation rounds ensure each P-REL reaches quiescence, while RECV/SYNC ensures multiple P-RELs converge to consensus.
+
+---
+
+### The Clock Evolution: From Datetime to Vector to Hybrid Logical Clock
+
+One of the most detailed discussions in our conversation was about the structure of `T`–the timestamp that provides causal ordering. This wasn't just a technical detail–it was a fundamental evolution from simple timekeeping to a sophisticated distributed coordination mechanism.
+
+**The Starting Point: T as Opaque and Monotonic**
+
+We began with a simple constraint: `T` is opaque (ish) and monotonic with respect to the context. This meant that for a single P-REL, you could use a simple logical integer clock (via a T property). But for multiple P-RELs, you might need vector clocks to detect causality across boundaries.
+
+This abstraction was powerful–it let us defer the specific implementation while enforcing the fundamental rule: time never goes backwards.
+
+**The Vector Clock Model**
+
+The next step was recognizing that if each CAATL had its own clock, then each operation must modify the CAATL. It was better to have a wall clock for CAATLs, which is configuration-dependent: either `P-RAL.T` for a single P-REL, or `{ [P-RAL.id]: P-RAL.T }` to always assume multiple P-RELs.
+
+This moved `T` from being a property of individual cells to being an environmental/contextual property at the P-RAL level. The clock became a vector–a dictionary mapping P-RAL IDs to their timestamps. This allowed the system to track causality across multiple P-RELs without requiring a central coordinator.
+
+**The Hybrid Wall Clock: Timestamp-Leading**
+
+But vector clocks have limitations. We needed something that could provide linearizability without the overhead of maintaining full vector state. The solution was a hybrid wall linear clock: `[Wall, Epoch, Idx]`.
+
+This model used wall clock time as the primary component, with Epoch as a causal generation counter and Idx to disambiguate concurrent events. The local evolution rule was straightforward: if the physical clock advanced, reset Epoch and Idx; otherwise, increment Idx.
+
+The problem: this model required external synchronization. If physical clocks were skewed, the system couldn't guarantee linearizability without a central time authority. We needed a model that could work with local semantics.
+
+**The Refinement: Epoch-Leading**
+
+The breakthrough came when we flipped the order: `[Epoch, SyncedWall, Idx]`. By making Epoch the most significant component, we created a **Hybrid Logical Clock (HLC)** where the Epoch serves as the primary "Causal Shield."
+
+The key insight: **Epoch could jump forward to handle remote causality, while SyncedWall remained the local physical witness.** This separation between the causal layer (Epoch) and the physical layer (SyncedWall) made the system partition-tolerant.
+
+**The Sway Rule**
+
+When a remote pulse arrives, the system applies the "Sway Rule": if `T_remote > T_local`, then `T_local[0] = max(T_local[0], T_remote[0]) + 1`. The Epoch jumps forward to match or exceed the remote, ensuring global linearizability without requiring synchronized physical clocks.
+
+This meant that even if two nodes had clocks hours apart, the system would remain linear. The Epoch would simply "carry" the causality forward, and the physical clocks would converge over time through gossip.
+
+**Handling Clock Skew**
+
+But we still wanted physical clocks to converge. The solution was to embed clock information in every transmission bundle: `[T_Sync, Clocks[], Pulse[]]`. The `Clocks` dictionary contains `{ nodeID: WallClock }` for each node seen since the last transmission.
+
+This enables NTP-style clock synchronization as an **optimization overlay**. The Clocks Op (itself a Pulse in the relations index) processes these clock dictionaries, computing skew and offset. Over time, the `SyncedWall` values across the network converge, reducing the frequency of Epoch jumps.
+
+The crucial insight: **clock synchronization is optional**. The system works correctly even if clocks never converge–the Epoch ensures linearizability regardless. Clock sync is just an optimization that makes the system more efficient.
+
+**The Default Epoch Value**
+
+The final decision was how to initialize a new P-REL. The answer: **`Epoch = UnixTime + skew`** at startup, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+
+This provides a global coarse sync without a central server. Even if two nodes have never met, their Epochs will be roughly in the same "galaxy." If a node has previously computed clock skew (either preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch. This allows nodes that have been part of the network before to start closer to the network's current causal generation.
+
+The Sway Rule handles the rest–if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch. But using prior skew information reduces the initial jump required.
+
+This decision stabilized the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensured that even isolated nodes start in a reasonable causal space. The system becomes self-stabilizing–it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+
+---
+
 ### The Reflection: Gold in Them Thar Hills
 
 The journey wasn't linear. We almost got lost in abstraction. We almost trapped ourselves.

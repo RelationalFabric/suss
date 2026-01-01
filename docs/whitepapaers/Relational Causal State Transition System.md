@@ -28,7 +28,7 @@ Familiarity with reactive programming (React, RxJS, MobX), state management patt
 
 **What is delivered:**
 
-- **RaCSTS Specification** (§6): A formal definition of propagator networks as serializable values, grounded in State Transition Systems (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
+- **RaCSTS Specification** (§6): A formal definition of propagator networks as serializable values, grounded in State Transition Systems [15] (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
 - **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serializability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-REL serialization (§7.2).
 - **Suss Toolkit** (§8): Reference TypeScript implementation demonstrating practical application. Includes performance analysis (§8.4) and usage patterns (§8.5).
 
@@ -114,7 +114,7 @@ This is not a tooling problem that better debuggers will solve. This is a model 
 
 ### 3.1 What Propagator Networks Solve
 
-Propagator networks, as described by Sussman and Radul, represent a structural shift in how we think about computation and state. They solve the problems that tree-structured reactive models struggle with:
+Propagator networks, as described by Sussman and Radul [1], represent a structural shift in how we think about computation and state. They solve the problems that tree-structured reactive models struggle with:
 
 **Bidirectional relationships become natural.** Declare "A = B + C" and the network maintains this relationship regardless of which variable changes first. The topology encodes the constraint, not the code flow.
 
@@ -285,7 +285,7 @@ This is what RaCSTS provides: a specification for networks as serializable value
 
 ### 6.1 Formal Definition
 
-**RaCSTS** (Relational and Causal State Transition System, pronounced "Rackets") is a specification for serializable propagator networks as properly basic data structures.
+**RaCSTS** (Relational and Causal State Transition System, pronounced "Rackets") is a specification for serializable propagator networks as properly basic data structures, grounded in State Transition Systems theory [15].
 
 RaCSTS is defined by three pillars:
 
@@ -326,7 +326,7 @@ Each layer wraps the previous, adding semantic structure (tags, annotations, cau
 
 **Tag:** A semantic label for a value, used implicitly for type discrimination and protocol dispatch.
 
-**T:** A logical timestamp for causal ordering. Structure: `[Epoch, SyncedWall, Idx]` where Epoch is a logical counter, SyncedWall is NTP-synchronized wall time, and Idx disambiguates concurrent events. The Idx component uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearizable even outside individual P-RELs.
+**T:** A logical timestamp for causal ordering. Structure: `[Epoch, SyncedWall, Idx]` where Epoch is a logical counter, SyncedWall is NTP-synchronized wall time [9], and Idx disambiguates concurrent events. The Idx component uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearizable [6] even outside individual P-RELs. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components.
 
 #### Core Types
 
@@ -918,23 +918,25 @@ When an Op Relation executes:
 
 Observe Pulse acceptance is the boundary between external events and internal propagation.
 
-#### Propagation Ripple: Internal Consistency
+#### Internal Propagation: Round-Based Coordination
 
-When Pulses flow through the network:
-1. **Selection:** Engine matches Pulses to Link Relations using src-selectors
-2. **Context Resolution:** For each matched link, resolve src/tgt cell IDs to RealNode objects and relation-id to RealRelation function
-3. **Reconciliation:** Execute `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`
-   - Relation receives full node objects as input
-   - Relation returns values (not nodes) as output
-4. **Value Comparison:** Check if returned values differ from current node values using structure-independent hash (Canon)
-5. **Update:** If values changed:
-   - Update node's value with new value
-   - Update node's asOf timestamp
-   - Change state to `'derived'` if it was `'observed'` or `'consensus'`
-6. **Emit New Pulses:** Updated cells emit new Pulses, triggering connected Link Relations
-7. **Iterate:** Increment round count and repeat until no cells accept further operations (quiescence)
+Internal propagation within a single P-REL uses the node's change time (timestamp) as the coordination mechanism. This is **separate** from the communication layer (RECV/SYNC) that handles synchronization between different P-REL instances.
 
-The propagation ripple is deterministic and monotonic—it always makes forward progress.
+**Each Propagation Round:**
+
+1. **Change Detection:** Look for nodes changed since last round (nodes whose timestamp advanced)
+2. **Link Identification:** For each changed node, identify all links where the source selector matches
+3. **Relation Resolution:** Resolve the relation function for each matched link
+4. **Relation Execution:** Run the relation: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`
+5. **Conditional Update:** Update the target node only if needed (using the round-specific T), which advances the node's timestamp
+6. **P-REL T Update:** Update the P-REL's global timestamp
+7. **Iteration Check:** If `round < max_rounds` and nodes were updated, repeat from step 1
+
+This continues until quiescence–a round where no nodes are updated. The method is deterministic and monotonic: nodes only advance forward in time, and the system always makes progress toward a fixed point. The key insight is using the node's change time as the signal for what needs to propagate, rather than maintaining explicit change lists or event queues.
+
+**Why This Separation Matters:**
+
+Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is fundamentally different from the communication layer (RECV/SYNC) that handles synchronization between different P-REL instances in a distributed system.
 
 #### Quiescence Detection: Stability
 
@@ -977,7 +979,7 @@ While RaCSTS is designed to make networks serializable values, the T structure e
 
 #### The Hybrid Epoch Clock
 
-The T structure is always `[Epoch, SyncedWall, Idx]`. The system achieves internal linearizability through fractional refinement of the Idx component.
+The T structure is always `[Epoch, SyncedWall, Idx]`. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components. The system achieves internal linearizability [6] through fractional refinement of the Idx component.
 
 **Component Roles:**
 - **Epoch:** Logical counter that provides the primary causal ordering. This is the "most significant bit" of the timestamp
@@ -988,7 +990,7 @@ This structure makes the system linearizable not just within a single P-REL, but
 
 #### The Sway Rule: Ensuring Linearizability
 
-When a node receives a remote timestamp T_remote, it must update its local timestamp T_local to maintain strict monotonicity:
+The Sway Rule ensures global linearizability [6] across distributed nodes. When a node receives a remote timestamp T_remote, it must update its local timestamp T_local to maintain strict monotonicity:
 
 ```
 Sway Rule:
@@ -1010,12 +1012,14 @@ The Epoch carries causality forward, making physical clock synchronization an op
 
 #### Clock Synchronization via Gossip
 
-While the Sway Rule ensures correctness, clock gossip provides optimization. The system implements vector clock gossip for NTP-style synchronization. Each transmission bundle contains a synchronization timestamp (T_Sync), a dictionary of clocks (Clocks), and an array of pulses (Pulse[]):
+While the Sway Rule ensures correctness, clock gossip provides optimization. The system implements clock gossip for NTP-style synchronization [9]. Each transmission bundle contains a synchronization timestamp (T_Sync), a dictionary of clocks (Clocks), and an array of pulses (Pulse[]):
 
 Where:
 - `T_Sync` is the sender's current `[Epoch, SyncedWall, Idx]` (with Idx containing fractional round if mid-propagation)
-- `Clocks` is `Dictionary<NodeId, WallClock>` containing observed timestamps from other nodes
-- `Pulse[]` is the array of state transitions being transmitted
+- `Clocks` is `Dictionary<NodeId, WallClock>` containing observed wall clock timestamps from other nodes (used for NTP-style optimization, not for causal ordering)
+- `Pulse[]` is the array of state transitions being transmitted, each with its own `[Epoch, SyncedWall, Idx]` timestamp
+
+**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, SyncedWall, Idx]` timestamp. The Sway Rule ensures that when a P-REL receives a remote timestamp, it updates its local Epoch to maintain global linearizability. The Clocks dictionary is used only for optimizing physical clock synchronization (SyncedWall convergence), not for causal ordering—the Epoch component handles causality.
 
 **Clock Op as Pulse:**
 The Clocks Op is itself a Pulse in the relations index. It:
@@ -1033,9 +1037,26 @@ Over time, clocks converge despite local drift:
 
 This is an **optional optimization**—the Epoch-based Sway Rule ensures correctness regardless of clock synchronization quality.
 
+#### Initialization: Default Epoch Value
+
+When initializing a new P-REL, the system sets the initial Epoch value as: **`Epoch = UnixTime + skew`**, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+
+**Initialization Logic:**
+- If a node has previously computed clock skew (preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch
+- If no prior skew is available, `skew = 0` and the epoch starts at UnixTime
+- This allows nodes that have been part of the network before to start closer to the network's current causal generation
+
+**Benefits:**
+- Provides global coarse sync without a central server
+- Even if two nodes have never met, their Epochs will be roughly in the same "galaxy"
+- Nodes with prior network participation start closer to the current causal generation, reducing the initial Epoch jump required when they reconnect
+- The Sway Rule handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch
+
+This decision stabilizes the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilizing—it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+
 #### Internal Linearizability: Fractional Idx Refinement
 
-The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearizability **even outside individual P-RELs**—when multiple P-RELs are coordinating or when splitting a P-REL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
+The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearizability [6] **even outside individual P-RELs**—when multiple P-RELs are coordinating or when splitting a P-REL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
 
 **Behavior:**
 - **External input (Observe Pulse):** Increments BaseIdx, Round starts at 0
@@ -1082,7 +1103,7 @@ The system achieves consensus without a leader through three foundational proper
 
 1. **The Sway Rule ensures global linearizability without a central master clock**: When nodes receive remote timestamps, the Epoch-based Sway Rule advances their local clock to maintain total ordering. No central coordinator is needed—each node independently maintains causal correctness through local logic.
 
-2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs), both sides are guaranteed to converge on the same result without a central coordinator.
+2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
 
 3. **Any node can initiate consensus for any path**: There is no designated leader node that coordinates consensus. Every node has equal authority to emit a Sync Op for any state path. If multiple nodes initiate competing Syncs, they merge naturally through the accumulator dictionary or resolve through Epoch-based ordering.
 
@@ -1108,25 +1129,50 @@ The Sync Op is a specialized Op Relation that emits a consensus accumulator. It 
 
 The Sync Op is not a request-response—it's a **propagating constraint** that accumulates witnesses as it flows through the gossip fabric.
 
-#### The Rolling Snowball Protocol
+#### Communication Between P-RELs: RECV and SYNC
 
-When RECV processes a Sync Pulse, it follows the accumulation logic:
+While internal propagation handles consistency within a P-REL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RELs. This is the gossip layer that enables distributed convergence.
 
-**1. Identity Check:**
-- If `localNodeId` is already in the dictionary: Node has already contributed, do nothing (prevents infinite cycles)
+**On OBSERVE:**
 
-**2. Append:**
-- If `localNodeId` is missing: Append `{localNodeId: localValue}` to the dictionary
+When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RELs, seeking consensus.
 
-**3. Threshold Check:**
-- If `size(dictionary) < count`: Node emits a new Pulse via Op Relation containing the updated dictionary. This "re-injects" the consensus into the gossip stream
-- If `size(dictionary) >= count`: Consensus reached. Mark as **Complete**
+**On SYNC:**
 
-**4. Return to Sender (Implicit Loopback):**
-- Every node re-emits the message to its connected nodes
-- The fully-populated dictionary eventually "washes back" over the entire network
-- When any node receives a Sync where `size >= count`, it stops emitting and executes the result
-- The result is marked with **consensus lineage**—stronger than derived, weaker than observed
+When a SYNC pulse arrives, the system checks the quorum:
+
+- If the count of keys equals the target quorum:
+  - If the value is `stale`: If quorum is met for a value, set it as `consensus`; else increase the required count and return the incoming SYNC with the new count
+  - Else: Do nothing (already decided)
+- Else:
+  - If you haven't voted: Add your vote to the original SYNC and return it
+  - Else: Return the original SYNC unchanged
+
+This creates a "rolling snowball" effect where the SYNC accumulator grows as it propagates through the network until consensus is reached.
+
+**On RECV:**
+
+RECV is the communication entrypoint. For each node in the incoming dictionary:
+
+1. Get the last T for that node from the local tracking (stored as `[Epoch, SyncedWall, Idx]` per node)
+2. Filter pulses for novelty: `T_incoming > T_last` (where T_incoming and T_last are both `[Epoch, SyncedWall, Idx]` structures)
+3. Keep a copy of the filtered pulses in the P-REL meta (merge with append)
+4. Process each pulse, applying the Sway Rule to update local T if needed
+
+**DELTA:**
+
+DELTA collects changes since the last DELTA execution:
+
+1. Collect the changes since last DELTA
+2. Construct a `nodeId: Pulse[]` dictionary with your changes
+3. Merge the other node's pulses from the meta (set in RECV)
+4. Clear the meta recorded pulses
+5. Update the last delta time in the meta
+6. Return a RECV with the change-dictionary
+
+**The Convergence Guarantee:**
+
+This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–ensures that each P-REL reaches quiescence locally while multiple P-RELs converge to consensus globally. The convergence is guaranteed by the mathematical properties of the underlying data structure (join-semilattice [10]), ensuring that even if the network splits, both sides will join when they reconnect. There's no need for a central coordinator–convergence is a natural consequence of the propagator network's structure.
 
 #### Valuation Functions
 
@@ -1141,7 +1187,7 @@ The final value used is determined by a reduction of the dictionary:
 The Sync Op leverages the propagator network's fundamental property: **local consistency, global convergence**. This is leader-free consensus because convergence is guaranteed by the mathematical properties of the underlying data structure, not by coordinator logic.
 
 **Semilattice Foundation:**
-- The change set model is a join-semilattice (foundation of CRDTs)
+- The change set model is a join-semilattice [10] (foundation of CRDTs [7,8])
 - When two nodes receive different Sync dictionaries, they join: `NewState = CurrentState ∨ RemoteState`
 - The join operation is:
   - **Commutative**: `A ∨ B = B ∨ A` (order doesn't matter)
@@ -1265,7 +1311,7 @@ When MaxRounds is reached:
 
 **Suss** is the reference TypeScript implementation of RaCSTS. It demonstrates that the specification is not theoretical—it is practical, implementable, and ready for production use.
 
-**Etymology and Meaning:** The name "Suss" honors Gerald J. Sussman, whose foundational work on propagator networks with Alexey Radul provided the theoretical foundation for this system. But it also doubles as an evocative verb in modern English—to "suss out" means to investigate, to understand, or to find the truth of a situation. This perfectly encapsulates what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it. The library susses out the state, susses out the relationships, susses out what needs to propagate.
+**Etymology and Meaning:** The name "Suss" honors Gerald J. Sussman, whose foundational work on propagator networks with Alexey Radul [1] provided the theoretical foundation for this system. But it also doubles as an evocative verb in modern English—to "suss out" means to investigate, to understand, or to find the truth of a situation. This perfectly encapsulates what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it. The library susses out the state, susses out the relationships, susses out what needs to propagate.
 
 **Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (adding operations to change sets, collapsing redundant operations, materializing values through interpretation, computing constraint alignments) are the complete toolkit. Everything else is built from these primitives.
 
@@ -1533,7 +1579,7 @@ Each solution reveals the next missing object. The journey continues.
 
 **Standard Higher-Order Relations:** Six core toolkit primitives: `mark` (directional truth propagation), `linear` (bidirectional numeric constraints), `map` (functional transformation with conflict resolution), `constrain` (bidirectional constraint solver), `reduce` (N→1 aggregation), `join` (N→M relational knitting). These are standard primitives, not optional extensions.
 
-**State Transition System (STS):** The theoretical grounding for CAnATL. CAnATL is a reified trace of an STS, where each Pulse is a transition and T provides causal ordering.
+**State Transition System (STS) [15]:** The theoretical grounding for CAnATL. CAnATL is a reified trace of an STS, where each Pulse is a transition and T provides causal ordering.
 
 **Suss:** The reference TypeScript implementation of RaCSTS. Demonstrates practical application and proves the specification is implementable.
 
@@ -1802,15 +1848,15 @@ The `linear` relation demonstrates how RaCSTS makes common patterns trivial. Uni
 
 ### Appendix D: Comparison with Related Work
 
-**Propagator Networks (Sussman & Radul):** RaCSTS builds on the propagator model but adds serialization as a first-class concern. Traditional propagators are runtime constructs; RaCSTS makes them values.
+**Propagator Networks (Sussman & Radul) [1]:** RaCSTS builds on the propagator model but adds serialization as a first-class concern. Traditional propagators are runtime constructs; RaCSTS makes them values.
 
-**CRDTs (Conflict-free Replicated Data Types):** CRDTs ensure convergence in distributed systems. RaCSTS uses similar ideas (monotonicity, convergence) but for propagation networks, not distributed state.
+**CRDTs (Conflict-free Replicated Data Types) [7,8]:** CRDTs ensure convergence in distributed systems. RaCSTS uses similar ideas (monotonicity, convergence) but for propagation networks, not distributed state.
 
 **Reactive Programming (RxJS, MobX):** Reactive libraries handle data flow and change propagation. RaCSTS makes the network itself serializable, enabling capabilities reactive libraries don't provide.
 
-**State Machines:** State machines define transitions between discrete states. RaCSTS is grounded in State Transition Systems but focuses on networks of continuous propagation, not discrete state machines.
+**State Machines:** State machines define transitions between discrete states. RaCSTS is grounded in State Transition Systems [15] but focuses on networks of continuous propagation, not discrete state machines.
 
-**Datalog / Logic Programming:** Datalog defines relations and propagates constraints. RaCSTS provides similar constraint propagation but with serializable, temporal networks as first-class values.
+**Datalog / Logic Programming [16,17]:** Datalog defines relations and propagates constraints. RaCSTS provides similar constraint propagation but with serializable, temporal networks as first-class values.
 
 ### Appendix E: Failure Modes and Non-Convergence
 
@@ -1887,6 +1933,44 @@ Non-convergence is not a failure of RaCSTS—it's a property of the specific net
 - Appendices: ~800 (without expanded Appendix C)
 
 **Total: ~7,875 words**
+
+---
+
+## References
+
+1. **Sussman, G. J., & Radul, A.** (2009). The Art of the Propagator. *MIT Computer Science and Artificial Intelligence Laboratory*. Available: https://groups.csail.mit.edu/mac/users/gjs/6.945/readings/art-of-propagator.pdf
+
+2. **Lamport, L.** (1978). Time, Clocks, and the Ordering of Events in a Distributed System. *Communications of the ACM*, 21(7), 558-565. Available: https://lamport.azurewebsites.net/pubs/time-clocks.pdf
+
+3. **Fidge, C. J.** (1988). Timestamps in Message-Passing Systems That Preserve the Partial Ordering. *Proceedings of the 11th Australian Computer Science Conference*, 56-66.
+
+4. **Mattern, F.** (1988). Virtual Time and Global States of Distributed Systems. *Parallel and Distributed Algorithms*, 215-226.
+
+5. **Kulkarni, S., et al.** (2014). Logical Physical Clocks and Consistent Snapshots in Globally Distributed Databases. *Proceedings of the VLDB Endowment*, 8(12), 1446-1457. Available: https://cse.buffalo.edu/tech-reports/2014-04.pdf
+
+6. **Herlihy, M. P., & Wing, J. M.** (1990). Linearizability: A Correctness Condition for Concurrent Objects. *ACM Transactions on Programming Languages and Systems*, 12(3), 463-492. Available: https://cs.brown.edu/~mph/HerlihyW90/p463-herlihy.pdf
+
+7. **Shapiro, M., et al.** (2011). Conflict-free Replicated Data Types. *Proceedings of the 13th International Symposium on Stabilization, Safety, and Security of Distributed Systems (SSS 2011)*, 386-400. Available: https://hal.inria.fr/inria-00555588/document
+
+8. **Shapiro, M., et al.** (2011). A Comprehensive Study of Convergent and Commutative Replicated Data Types. *Rapport de recherche RR-7506, INRIA*. Available: https://hal.inria.fr/inria-00555588/document
+
+9. **Mills, D., et al.** (2010). Network Time Protocol Version 4: Protocol and Algorithms Specification. *RFC 5905*. Available: https://www.rfc-editor.org/rfc/rfc5905.html
+
+10. **Davey, B. A., & Priestley, H. A.** (2002). *Introduction to Lattices and Order* (2nd ed.). Cambridge University Press.
+
+11. **Eugster, P. T., et al.** (2004). The Many Faces of Publish/Subscribe. *ACM Computing Surveys*, 36(2), 114-131. Available: https://www.cs.cornell.edu/home/rvr/papers/Gossip.pdf
+
+12. **Demers, A., et al.** (1987). Epidemic Algorithms for Replicated Database Maintenance. *Proceedings of the 6th Annual ACM Symposium on Principles of Distributed Computing*, 1-12.
+
+13. **Lamport, L.** (1998). The Part-Time Parliament. *ACM Transactions on Computer Systems*, 16(2), 133-169.
+
+14. **Ongaro, D., & Ousterhout, J.** (2014). In Search of an Understandable Consensus Algorithm. *Proceedings of the 2014 USENIX Annual Technical Conference*, 305-319. Available: https://raft.github.io/raft.pdf
+
+15. **Manna, Z., & Pnueli, A.** (1992). *The Temporal Logic of Reactive and Concurrent Systems: Specification*. Springer-Verlag.
+
+16. **Abiteboul, S., et al.** (1995). *Foundations of Databases*. Addison-Wesley.
+
+17. **Ceri, S., Gottlob, G., & Tanca, L.** (1989). What You Always Wanted to Know About Datalog (And Never Dared to Ask). *IEEE Transactions on Knowledge and Data Engineering*, 1(1), 146-166.
 
 ---
 
