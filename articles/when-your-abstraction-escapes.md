@@ -138,6 +138,8 @@ We had moved beyond mere invalidation into collaborative computation. The shadow
 
 The "Scream" protocol we'd been discussing wasn't just notification–it was a Propagator Pulse. Properties weren't just values–they were Cells in the propagator network.
 
+This was a critical realisation: **Pulse** became the atomic unit of the system. Not operations, not events, not messages–Pulses. They are the fundamental unit that flows through the network, carrying updates from cell to cell. Every change, every propagation, every reconciliation happens through Pulses. The structure `[T, Tag, Args, Meta?]` became the universal packet–time-stamped, tagged, and carrying just enough information to update a cell.
+
 > Then came the dangerous question: "Do we need anything from canon to implement this in canon, or have we discovered a new primitive?"
 
 Gemini's answer was definitive: "We have discovered a **new primitive**, but it is one that effectively acts as the **'Connective Tissue'** for everything else in Canon."
@@ -184,7 +186,11 @@ This led to tagged op logs: `[TAG, old, new, T]`. The tag became the protocol ID
 
 The critical insight: time (`T`) came first, making every operation a "Time-Sorted Packet." This enabled causal ordering and serialisability. In a distributed graph split across an edge, we could detect gaps if patches arrived out of order. If a cell had state `[v1, v2, T10]` and received `[v3, v4, T12]`, it knew it had missed a transition at `T11`.
 
+But there was a deeper insight: **there is no generic "Set" operation.** All external entropy enters the system as **Observe** operations. An ObservePulse has the structure `[T, ObserveTag, [Path, Old, New], Meta?]`–it's both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic: the Pulse is accepted only if the cell's current value equals `Old`. If it doesn't match, the cell transitions to `stale` and seeks consensus. This wasn't a design choice–it was a requirement. Without it, we couldn't guarantee causal integrity across distributed boundaries.
+
 The cell became an interpretation VM. Each cell was a tiny virtual machine defined by its `interpretation` function. All modification was done via communicating operations to yourself or other cells. > The op log itself became the value–in memory-space A, the value is the live POJO; across the edge, the value is the replayable log.
+
+This was more than a metaphor. Each cell truly is a virtual machine–it processes a sequence of Pulses through its interpretation function to produce a materialized value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value–it stores the operations, and the interpretation projects those operations into a value. This separation–between the stored operations (the CAnATL) and the interpretation (the VM)–is what makes cells serializable. The operations are data. The interpretation is provided at runtime.
 
 As we refined the model, we realised: "In this model, each cell is a tiny VM defined by 'interpretation'."
 
@@ -218,6 +224,50 @@ This organic evolution from log-based to P-REL based wasn't planned, but it was 
 
 ---
 
+### The Departure: From Pipes to Filters
+
+As we refined the model, another subtle but critical shift occurred. Initially, we assumed that pulses would propagate directly to nodes–links were just "pipes" that carried pulses from one node to another. But when we defined Link Relations, we departed from this model entirely.
+
+> "Until now, we assumed links were just 'pipes.' But in a serializable propagator network, the **Link is a Filter/Transformer.**"
+
+A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**–not just passing pulses through. This wasn't just a refinement–it was a fundamental departure from automatic propagation.
+
+Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serializing data; you are serializing a **Policy of Movement**.
+
+This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value. The propagation policy is part of the data structure itself, not a runtime behavior.
+
+---
+
+### The Internal Update Semantics: Four Layers of Abstraction
+
+As we formalised the system, we realised there were four distinct layers in how updates flow through the network:
+
+**1. Relations → Provide New Values**
+
+Link Relations are pure functions that compute proposed values. They receive full node objects (with value, state, meta, and timestamp) and return new values that satisfy the relationship: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`. They don't mutate nodes–they propose values.
+
+**2. Implementation → Updates Conditionally (Timestamp Increases)**
+
+The implementation decides whether to accept the relation's proposal. Nodes are updated only if the timestamp advances: `T_new > T_current`. This is conditional–not every relation execution results in a node update. The timestamp increment is the signal that a node actually changed.
+
+**3. DELTA Op → Generates RECV of Pulses**
+
+When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-REL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state–it emits RECV pulses for communication. This is the boundary between local state and network communication.
+
+**4. System Logs/Transmits RECV as Change Message**
+
+RECV pulses are logged and/or transmitted as change messages. This is the gossip layer–RECV becomes the message format. The system merges inbound DELTA with outbound data for naive gossip, ensuring information diffuses through the network.
+
+This four-layer distinction matters because:
+- Relations are pure and don't mutate
+- The implementation controls when nodes actually update (timestamp check)
+- DELTA bridges local updates to network communication
+- RECV is the serializable message format
+
+The separation between computation (relations), conditional updates (implementation), communication generation (DELTA), and transmission (system) is what makes RaCSTS both deterministic and distributable.
+
+---
+
 ### The Reflection: Gold in Them Thar Hills
 
 The journey wasn't linear. We almost got lost in abstraction. We almost trapped ourselves.
@@ -236,7 +286,7 @@ We had spent decades modelling nouns (objects, entities) while leaving the verbs
 
 The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapaers/Relational%20Causal%20State%20Transition%20System.md) – a specification for serialisable propagator networks as properly basic data structures.
 
-What started as a question about rewriting an ADR became a 7,875-word whitepaper that formalises propagator networks as serialisable values. The network itself–its topology, state, and causal history–became a first-class artifact you can serialise, version, and reason about.
+What started as a question about rewriting an ADR became a comprehensive whitepaper that formalises propagator networks as serialisable values. The network itself–its topology, state, and causal history–became a first-class artifact you can serialise, version, and reason about.
 
 ---
 

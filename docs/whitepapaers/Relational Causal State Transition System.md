@@ -372,17 +372,23 @@ To bridge the formal type hierarchy with operational semantics, we define the en
 
 **Cell (CAnATL):** The fundamental unit of state. A cell is a `[T, Tag, Value, Meta?]` structure where T provides causal ordering, Tag provides semantic identity, and Value is the current authoritative state. Cells are the "variables" in a propagator network. Cells contain only authoritative state—no history, window, or context at the node level.
 
-**Pulse:** An operation that updates a cell. Structure: `[T, Tag, Args, Meta?]` where T is the logical timestamp, Tag is the operation identifier, Args are operation-specific parameters, and Meta is optional metadata. Pulses are the "currency" of change—they flow through the network carrying updates.
+**Pulse:** The atomic unit of propagation. Structure: `[T, Tag, Args, Meta?]` where T is the logical timestamp, Tag is the operation identifier, Args are operation-specific parameters, and Meta is optional metadata. Pulses are the fundamental unit that flows through the network—not operations, not events, not messages, but Pulses. Every change, every propagation, every reconciliation happens through Pulses. They carry updates from cell to cell, and the structure `[T, Tag, Args, Meta?]` is the universal packet that enables causal ordering and serialisability.
 
-**ObservePulse:** The fundamental operation for introducing external entropy. Structure: `[T, ObserveTag, [Path, Old, New], Meta?]`. This single construct is both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic—the Pulse is accepted only if the cell's current value equals Old, otherwise it triggers an amnesiac event or refinement (e.g., Sync). There is no generic "Set" operation—all external entropy enters as Observe operations.
+**ObservePulse:** The fundamental operation for introducing external entropy. Structure: `[T, ObserveTag, [Path, Old, New], Meta?]`. This single construct is both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic—the Pulse is accepted only if the cell's current value equals Old, otherwise it triggers an amnesiac event or refinement (e.g., Sync). 
+
+**Critical Design Decision:** There is no generic "Set" operation—all external entropy enters as Observe operations. This is not an implementation detail but a fundamental architectural choice. Without this constraint, we cannot guarantee causal integrity across distributed boundaries. The compare-and-swap semantics are intrinsic to the Pulse structure itself, not layered on top. This design ensures that every external change is both an observation (what was seen) and a proposal (what should be), with the cell's current state serving as the validation gate.
 
 **Op Relation:** External operation that introduces entropy into the network. Signature: `op(P-REL, args, P-REL-meta) -> [delta-P-REL, Pulse[], meta']`. Op Relations are the entry points for external change—they create new Pulses that disturb the network from its quiescent state.
 
 **Link Relation:** Internal propagation logic between cells. Signature: `link(src, tgt, meta) -> [srcV, tgtV, meta']`. Link Relations maintain relationships between cells—they are the "constraints" or "physics" of the network.
 
+**From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serializing data; you are serializing a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value—the propagation policy is part of the data structure itself, not a runtime behavior.
+
 **Change Set:** A collection of operations applied to cells. Used by toolkit primitives for adding operations, collapsing redundant operations, materializing values, and computing constraint alignments. Change Sets batch operations for efficient application.
 
 **Interpretation:** A function that projects a CAnATL to a materialized Value. Signature: `interpretation(CAnATL) -> Value`. The interpretation defines how a cell's CAnATL structure becomes a concrete value. Each cell is an "Interpretation VM"—it processes operations through its interpretation to produce its current value.
+
+**The Interpretation VM Metaphor:** This is more than a metaphor. Each cell truly is a virtual machine that processes a sequence of Pulses through its interpretation function to produce a materialized value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value—it stores the operations (the CAnATL), and the interpretation projects those operations into a value. This separation—between the stored operations (the CAnATL) and the interpretation (the VM)—is what makes cells serializable. The operations are data. The interpretation is provided at runtime. This is why a network can be serialized and resumed anywhere: the operations are portable, and the interpretation can be provided by any host.
 
 **Quiescence:** A state where no further propagation occurs. Detected when a full propagation round produces no accepted operations—all cells have stable state (no T advances). Quiescence is the "solution" to the constraint network.
 
@@ -459,6 +465,8 @@ Link Relations operate on pairs of cells. They:
 - Observe full node state: value, state, meta, and asOf (timestamp)
 - Compute new **values** that satisfy the relationship
 - Return values (not nodes) and updated metadata
+
+**The Departure from Automatic Propagation:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. This shift from "pipes" to "filters/transformers" is what makes the network serializable as a value—the propagation policy is part of the data structure itself, not a runtime behavior.
 
 The relation sees the full context of each node—value, state, meta, and asOf—but returns only the values. The system then uses these returned values to update the nodes, marking them as derived if the value changed. Relations that require temporal context (trend detection, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cells.
 
@@ -871,6 +879,34 @@ Serialization is not an afterthought—it is the fundamental capability of the s
 
 ### 7.4 Operational Semantics
 
+#### Internal Update Semantics: Four Layers of Abstraction
+
+The system operates through four distinct layers that separate concerns and enable both determinism and distributability:
+
+**1. Relations → Provide New Values**
+
+Link Relations are pure functions that compute proposed values. They receive full node objects (with value, state, meta, and timestamp) and return new values that satisfy the relationship: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`. They don't mutate nodes—they propose values. Relations are pure and deterministic—given the same inputs, they produce the same outputs.
+
+**2. Implementation → Updates Conditionally (Timestamp Increases)**
+
+The implementation decides whether to accept the relation's proposal. Nodes are updated only if the timestamp advances: `T_new > T_current`. This is conditional—not every relation execution results in a node update. The timestamp increment is the signal that a node actually changed. This conditional update mechanism ensures monotonicity and prevents redundant work.
+
+**3. DELTA Op → Generates RECV of Pulses**
+
+When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-REL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state—it emits RECV pulses for communication. This is the boundary between local state and network communication. DELTA acts as a router, determining which nodes should receive which pulses.
+
+**4. System Logs/Transmits RECV as Change Message**
+
+RECV pulses are logged and/or transmitted as change messages. This is the gossip layer—RECV becomes the message format. The system merges inbound DELTA with outbound data for naive gossip, ensuring information diffuses through the network. This layer handles the actual transmission, whether across process boundaries, network boundaries, or storage boundaries.
+
+This four-layer distinction is critical:
+- Relations are pure and don't mutate (enables serialization)
+- The implementation controls when nodes actually update (timestamp check ensures monotonicity)
+- DELTA bridges local updates to network communication (enables distribution)
+- RECV is the serializable message format (enables gossip and persistence)
+
+The separation between computation (relations), conditional updates (implementation), communication generation (DELTA), and transmission (system) is what makes RaCSTS both deterministic and distributable.
+
 #### Op Execution: Introducing Entropy
 
 When an Op Relation executes:
@@ -919,7 +955,23 @@ In adversarial cases (pathological dependency graphs), propagation might not qui
 
 **Important:** Circuit breakers are a bounded execution mechanism, not a correctness guarantee. They prevent infinite loops in adversarial graphs but do not guarantee quiescence. Progress evidence (T-ordering) shows the system is making forward progress, but bounded execution may halt before full quiescence is reached.
 
-### 7.5 Serialisability and Linearity in Distributed Systems
+### 7.5 The Organic Evolution: From Log-Based to P-REL Based
+
+As the system was refined, a subtle but important transition occurred. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-REL based** (where operations lived in the Protocol-Relation domain).
+
+This transition wasn't purposeful—it was organic. The abstraction led the way.
+
+**The Key Shift:** Instead of each change emitting individual pulses that triggered immediate propagation, the system began using the **change time of the node** itself to trigger propagation. When a node's timestamp advanced, that became the signal to propagate—not a separate pulse for each individual operation.
+
+**Collection Semantics:** By only using the pulse to communicate change, and by using the node's change time as the trigger, the system enabled **collection semantics**. Multiple changes to a node could be batched. The system could wait for quiescence before propagating, collecting all the mutations that happened within a single logical tick.
+
+**Performance Benefits:** Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimization—it was a fundamental shift in how the network reasoned about change.
+
+**Optimization Opportunities:** Collection semantics opened up optimization opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
+
+This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state—they were part of the state itself.
+
+### 7.6 Serialisability and Linearity in Distributed Systems
 
 While RaCSTS is designed to make networks serializable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes how the Hybrid Epoch Clock enables both local serialisability and distributed linearity.
 
@@ -1213,6 +1265,8 @@ When MaxRounds is reached:
 
 **Suss** is the reference TypeScript implementation of RaCSTS. It demonstrates that the specification is not theoretical—it is practical, implementable, and ready for production use.
 
+**Etymology and Meaning:** The name "Suss" honors Gerald J. Sussman, whose foundational work on propagator networks with Alexey Radul provided the theoretical foundation for this system. But it also doubles as an evocative verb in modern English—to "suss out" means to investigate, to understand, or to find the truth of a situation. This perfectly encapsulates what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it. The library susses out the state, susses out the relationships, susses out what needs to propagate.
+
 **Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (adding operations to change sets, collapsing redundant operations, materializing values through interpretation, computing constraint alignments) are the complete toolkit. Everything else is built from these primitives.
 
 **Purpose:** Suss exists to prove RaCSTS works and to provide practical tooling for building serializable propagator networks in TypeScript. It is opinionated about correctness, not about how you use it.
@@ -1469,7 +1523,7 @@ Each solution reveals the next missing object. The journey continues.
 
 **P-REL (Parallel Relational Layer):** The serializable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
 
-**Pulse:** An operation that updates a cell. Structure: `[T, Tag, Args, Meta?]`. The "currency" of change in the network.
+**Pulse:** The atomic unit of propagation. Structure: `[T, Tag, Args, Meta?]`. The fundamental unit that flows through the network.
 
 **Quiescence:** State where no further propagation occurs. All cells are stable, no operations accepted. The "solution" to the constraint network.
 
