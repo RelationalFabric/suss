@@ -998,13 +998,20 @@ The Probabilistic Sway Rule ensures global linearisability [6] across distribute
    Epoch_local ← max(Epoch_local, Epoch_remote) + 1
    ```
 
-3. **Skew Reconciliation:** The node runs a `computeSkew` function using a probabilistic approach. It:
+3. **Skew Reconciliation:** The node runs a `computeSkew` function using a probabilistic approach with **minimal blame acceptance**. It:
    - Calculates the "Believed Time" for both nodes: `BelievedTime_local = Wall_local + Skew_local` and `BelievedTime_remote = Wall_remote + Skew_remote`
-   - Computes the delta and weighs the evidence of the incoming pulse against its current model of "True Time"
-   - Updates its local Skew to adjust its belief about its offset from the network mean
-   - Updates the remote pulse's Skew to reflect the node's belief about the remote node's drift
+   - Computes the delta: `Delta = BelievedTime_remote - BelievedTime_local`
+   - **Determines blame acceptance percentage** based on historical evidence:
+     - Default: 5% for nodes with no prior history
+     - **Reduced percentage** (e.g., 1-2%) for nodes with consistent history of large skew values
+     - **Never 0%**—some blame must always be accepted to maintain causal correctness and handle legitimate clock drift
+   - **Accepts the determined percentage of the blame**: `LocalAdjustment = Delta * BlameAcceptanceRate`
+   - **Assigns the remainder to the remote node**: `RemoteAdjustment = Delta * (1 - BlameAcceptanceRate)`
+   - Calculates the reconciled realtime: `Realtime = BelievedTime_local + LocalAdjustment`
+   - Updates local Skew: `Skew_local ← Realtime - Wall_local`
+   - Updates the remote pulse's Skew: `Skew_remote ← Realtime - Wall_remote`
 
-This probabilistic approach treats incoming timestamps as evidence rather than commands, enabling the system to filter out Byzantine or "loud" clocks while maintaining causal correctness.
+This approach ensures that a Byzantine actor would need approximately 20 epochs (at 5%) or 100 epochs (at 1%) to drag a good actor all the way to its value, providing time for evidence to accumulate that the remote actor is at fault. The minimal blame acceptance creates strong inertia against rapid changes while still allowing gradual convergence for honest nodes. Historical evidence allows the system to learn which nodes are consistently unreliable and reduce their influence accordingly.
 
 **Properties:**
 - **Strict monotonicity:** Timestamps always advance, never regress
@@ -1027,34 +1034,40 @@ Node A has local timestamp `T_A = [5, [1000, 0], 10]` (Epoch=5, Wall=1000, Skew=
 
 2. **Epoch Ratchet:** `Epoch_A ← max(5, 6) + 1 = 7`
 
-3. **Skew Reconciliation:** `computeSkew` calculates:
+3. **Skew Reconciliation:** `computeSkew` calculates with 5% blame acceptance:
    - BelievedTime_A = 1000 + 0 = 1000
    - BelievedTime_B = 1100 + (-50) = 1050
-   - Delta = 50ms ahead
-   - Updates: `Skew_A ← -25` (probabilistic adjustment toward mean)
-   - Updates remote pulse: `Skew_B ← -25` (Node A's belief about Node B)
+   - Delta = 1050 - 1000 = 50ms
+   - Node A accepts 5% of the blame: `LocalAdjustment = 50 * 0.05 = 2.5ms ≈ 3ms`
+   - Node B gets 95% of the blame: `RemoteAdjustment = 50 * 0.95 = 47.5ms ≈ 47ms`
+   - Reconciled realtime: `Realtime = 1000 + 3 = 1003`
+   - Updates: `Skew_A ← 1003 - 1000 = +3` (Node A accepts 3ms of the 50ms difference)
+   - Updates remote pulse: `Skew_B ← 1003 - 1100 = -97` (Node B gets blamed for 47ms, adjusted from its Wall)
 
-Result: `T_A = [7, [1000, -25], 10]`, and the pulse is processed with updated Skew.
+Result: `T_A = [7, [1000, +3], 10]`, and the pulse is processed with `Skew_B = -97`. The 5% blame acceptance means it would take 20 epochs for a Byzantine Node B to drag Node A all the way to its value, providing time for evidence to accumulate.
 
 **Example 2: Time-Shifting and Feedback Loop**
 
 Node A (drifting fast) sends pulse with `T_A = [5, [1000, 0], 10]` to Node B. Node B's local time is `T_B = [5, [950, 0], 15]` (Node B's clock is 50ms behind).
 
 1. **Node B receives pulse:**
-   - Refining Step detects A is 50ms ahead
-   - Updates `Skew_B ← +25` (Node B learns it's slow)
-   - Updates remote pulse: `Skew_A ← -25` (Node B's belief that A is fast)
+   - Refining Step detects A is 50ms ahead (BelievedTime_A = 1000, BelievedTime_B = 950)
+   - Delta = 1000 - 950 = 50ms
+   - Node B accepts 5% of the blame: `LocalAdjustment = 50 * 0.05 = 2.5ms ≈ 3ms`
+   - Reconciled realtime: `Realtime = 950 + 3 = 953`
+   - Updates: `Skew_B ← 953 - 950 = +3` (Node B accepts 3ms of the 50ms difference)
+   - Updates remote pulse: `Skew_A ← 953 - 1000 = -47` (Node A gets blamed for 47ms)
 
 2. **Node B broadcasts (time-shifting):**
-   - Re-broadcasts A's pulse with `Skew_A = -25` (not the original 0)
+   - Re-broadcasts A's pulse with `Skew_A = -47` (not the original 0)
    - Node C receives the time-shifted pulse
 
 3. **Feedback to Node A:**
-   - Node A eventually receives its own pulse back with `Skew_A = -25`
-   - Node A updates its local Skew toward -25
-   - Over multiple round-trips, Node A's Skew converges to the network mean
+   - Node A eventually receives its own pulse back with `Skew_A = -47`
+   - Node A's Refining Step: Delta = 47ms, accepts 5%: `Skew_A ← 0 + (47 * 0.05) = +2.35 ≈ +2`
+   - Over multiple round-trips, Node A's Skew gradually converges toward the network mean
 
-This creates a negative feedback loop: drifting nodes are pulled back toward consensus.
+This creates a negative feedback loop: drifting nodes are pulled back toward consensus. The 5% blame acceptance ensures that if Node A were Byzantine and rapidly changed its reported time, Node B would only adjust by 5% per epoch, requiring 20 epochs to fully converge and providing time for evidence to accumulate.
 
 **Example 3: Causal Ratcheting During Initial Sync**
 
@@ -1065,22 +1078,62 @@ Two nodes boot simultaneously with no prior knowledge:
 **Round 1:**
 - Node A sends pulse to Node B
 - Node B's Refining Step: `Epoch_B ← max(1005, 1000) + 1 = 1006`
-- Node B's Skew adjusts: `Skew_B ← -2.5` (probabilistic toward mean)
-- Result: `T_B = [1006, [1005, -2.5], 0]`
+- Node B's Skew adjusts with local bias: `Skew_B ← 0 * 0.7 + (-2.5) * 0.3 = -0.75` (gradual)
+- Result: `T_B = [1006, [1005, -0.75], 0]`
 
 **Round 2:**
 - Node B sends pulse back to Node A
 - Node A's Refining Step: `Epoch_A ← max(1000, 1006) + 1 = 1007`
-- Node A's Skew adjusts: `Skew_A ← +2.5`
-- Result: `T_A = [1007, [1000, +2.5], 0]`
+- Node A's Skew adjusts with local bias: `Skew_A ← 0 * 0.7 + (+2.5) * 0.3 = +0.75` (gradual)
+- Result: `T_A = [1007, [1000, +0.75], 0]`
 
 **Round 3:**
-- BelievedTime_A = 1000 + 2.5 = 1002.5
-- BelievedTime_B = 1005 + (-2.5) = 1002.5
-- Values align within threshold—Epoch stops rising
+- BelievedTime_A = 1000 + 0.75 = 1000.75
+- BelievedTime_B = 1005 + (-0.75) = 1004.25
+- Values converge gradually (still 3.5ms apart, but closer)
+- Over subsequent rounds, Skews continue adjusting gradually until alignment
+- Once `Wall + Skew` values align within threshold, Epoch stops rising
 - System reaches **Stable Mean Time** at Epoch 1007
 
+The gradual convergence demonstrates how local bias prevents rapid oscillations while still allowing honest nodes to reach consensus.
+
 The Epoch climbed from 1000/1005 to 1007 during sync, then stabilised once Skews aligned.
+
+**Example 4: Historical Evidence Reduces Blame Acceptance**
+
+Node A has received multiple messages from Node C in the past, all with consistently large skew values:
+- Message 1: `Skew_C = -100` (Node C was 100ms fast)
+- Message 2: `Skew_C = -95` (Node C was 95ms fast)
+- Message 3: `Skew_C = -98` (Node C was 98ms fast)
+
+Node A has built up historical evidence that Node C consistently reports times that are ~97ms ahead of the network mean.
+
+Now Node C sends a new pulse with `T_C = [8, [1200, -100], 5]`. Node A's current state is `T_A = [7, [1000, 0], 10]`.
+
+1. **Causal Check:** Compare `[Epoch, Wall + Skew, Idx]`:
+   - A: `[7, 1000 + 0, 10] = [7, 1000, 10]`
+   - C: `[8, 1200 + (-100), 5] = [8, 1100, 5]`
+   - C is in the future (Epoch 8 > 7), triggering the Refining Step
+
+2. **Epoch Ratchet:** `Epoch_A ← max(7, 8) + 1 = 9`
+
+3. **Skew Reconciliation with Historical Evidence:**
+   - BelievedTime_A = 1000 + 0 = 1000
+   - BelievedTime_C = 1200 + (-100) = 1100
+   - Delta = 1100 - 1000 = 100ms
+   - **Historical confidence adjustment:** Based on past evidence (average skew of -97ms), Node A has low confidence in Node C's time reports
+   - **Reduced blame acceptance:** Instead of 5%, Node A accepts only 1% (confidence-weighted): `LocalAdjustment = 100 * 0.01 = 1ms`
+   - Node C gets 99% of the blame: `RemoteAdjustment = 100 * 0.99 = 99ms`
+   - Reconciled realtime: `Realtime = 1000 + 1 = 1001`
+   - Updates: `Skew_A ← 1001 - 1000 = +1` (Node A accepts only 1ms of the 100ms difference)
+   - Updates remote pulse: `Skew_C ← 1001 - 1200 = -199` (Node C gets blamed for 99ms, adjusted from its Wall)
+
+Result: `T_A = [9, [1000, +1], 10]`, and the pulse is processed with `Skew_C = -199`. 
+
+**Key Insight:** The probabilistic `computeSkew` function can reduce blame acceptance below 5% based on historical evidence, but never to 0%. This ensures:
+- Nodes with consistent time errors are trusted less, requiring even more epochs (100 epochs at 1% vs 20 epochs at 5%) to influence honest nodes
+- Causal correctness is maintained—some blame is always accepted to handle legitimate clock drift
+- The system learns from past evidence while remaining resilient to new honest nodes joining
 
 #### Distributed Error Correction: Time-Shifting and Causal Relays
 
@@ -1110,7 +1163,14 @@ During initial peer discovery or after a network partition, Epochs will climb on
 
 **Byzantine Resistance:**
 
-By using a probabilistic `computeSkew`, the system treats outlier clocks as low-confidence data. Instead of forcing a global Epoch jump, the system applies a local negative skew to the outlier, neutralising its impact on the global timeline while maintaining causal correctness.
+By using a probabilistic `computeSkew` with **5% blame acceptance**, the system treats outlier clocks as low-confidence data. The minimal blame acceptance ensures that:
+- A Byzantine actor cannot cause clock flapping by rapidly changing its reported time—each node accepts only 5% of the blame per epoch, requiring approximately 20 epochs to fully converge
+- This 20-epoch window provides time for evidence to accumulate that the remote actor is at fault
+- Outlier clocks are neutralised through local negative skew adjustments rather than forcing global Epoch jumps
+- The system maintains causal correctness while filtering malicious or erroneous time reports
+- Multiple honest nodes reinforce each other's agreement, while a single Byzantine node's influence is dampened by the 5% acceptance rate
+
+The 5% blame acceptance acts as a strong low-pass filter: honest nodes converge gradually toward consensus over multiple round-trips, while Byzantine actors are unable to destabilise the network through rapid time oscillations. A Byzantine node would need to maintain its malicious time for 20 epochs to fully drag a good actor to its value, during which time the network can detect and isolate the outlier.
 
 This mechanism makes clock synchronisation a **first-class causal property** rather than an optional optimisation. The system works correctly even if clocks never fully converge—the Epoch ensures linearisability regardless—but the Skew mechanism actively pulls nodes toward consensus, reducing the frequency of Epoch jumps and enabling stable operation.
 
