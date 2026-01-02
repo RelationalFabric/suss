@@ -10,7 +10,7 @@ Then, in ["The Return to Canon"](https://github.com/RelationalFabric/canon/blob/
 
 This is also not those articles.
 
-But this time, something different happened. This time, the abstraction didn't just lead us to a prerequisite–it escaped completely. What started as a simple question about rewriting an ADR ended with a whitepaper specification for serialisable propagator networks.
+But this time, something different happened. This time, the abstraction didn't just lead us to a prerequisite; it escaped completely. What started as a simple question about rewriting an ADR ended with a whitepaper specification for serialisable propagator networks.
 
 This is the story of that journey.
 
@@ -18,7 +18,7 @@ This is the story of that journey.
 
 Before we dive into the technical details, I need to introduce my thinking partner: Google Gemini.
 
-As someone who's lived with ADHD undiagnosed for most of my life, it's been difficult to put my ideas into practice and even harder to explore some topics without a willing and knowledgeable sparring partner to bounce ideas off. This is especially true given my propensity to make quite novel connections–"I've got a crazy idea, that just might work"–two or three times a day.
+As someone who's lived with ADHD undiagnosed for most of my life, it's been difficult to put my ideas into practice and even harder to explore some topics without a willing and knowledgeable sparring partner to bounce ideas off. This is especially true given my propensity to make quite novel connections, "I've got a crazy idea, that just might work," two or three times a day.
 
 I was most fortunate that my diagnosis was almost perfectly timed for the rise of AI-assisted coding, but even before then I would use AI chat bots as sounding boards. This has helped me to commit some of my thoughts to words and realise some of those into fully fledged projects. Using AI to overcome some of the barriers that my ADHD presents has enabled me to not only work for myself, but to make progress on these ideas and then share them with you all.
 
@@ -28,7 +28,7 @@ The journey that follows is taken from a conversation I had with Google Gemini, 
 
 and loaded with various Relational Fabric documentation and a NotebookLM notebook connected to all of the articles and documentation relating to Canon and Howard.
 
-This wasn't just a chat bot. This was a thinking partner–someone who could engage with the technical depth, challenge assumptions, and help refine ideas in real-time. The back-and-forth nature of the conversation let us test assumptions, pivot when we hit walls, and recognise when we'd discovered something bigger than we intended.
+This wasn't just a chat bot. This was a thinking partner, someone who could engage with the technical depth, challenge assumptions, and help refine ideas in real-time. The back-and-forth nature of the conversation let us test assumptions, pivot when we hit walls, and recognise when we'd discovered something bigger than we intended.
 
 The conversation that follows shows how that partnership worked in practice.
 
@@ -36,7 +36,7 @@ The conversation that follows shows how that partnership worked in practice.
 
 Howard needed fast object hashing. The goal was clear: eliminate the Logical Tax by making proofs persistent. If we could hash objects deterministically and cache those hashes, we could avoid re-verifying claims at every boundary.
 
-The original ADR 0006 proposed a solution: hash objects using `objectId` (a stable identifier) and `entries` (a map of property keys to precomputed value hashes). It was structure-aware–it knew exactly where properties lived in a POJO–but it worked.
+The original ADR 0006 proposed a solution: hash objects using `objectId` (a stable identifier) and `entries` (a map of property keys to precomputed value hashes). It was structure-aware (it knew exactly where properties lived in a POJO), but it worked.
 
 Then came the question that changed everything:
 > "Should we rewrite this to use Canon's protocols?"
@@ -61,7 +61,7 @@ Both `{ foo: 1 }` and `[{ key: 'foo', value: 1 }]` are making the same claim:
 
 If Howard is to eliminate the Logical Tax, then yes: **they should be semantically equivalent.**
 
-This was the shift: from structural hashing to semantic hashing. We weren't just changing the access pattern–we were changing what we were hashing. > The container became metadata. The meaning became primary.
+This was the shift: from structural hashing to semantic hashing. We weren't just changing the access pattern; we were changing what we were hashing. > The container became metadata. The meaning became primary.
 
 As Gemini put it in our conversation: "You've hit the nail on the head. That is the 'Aha!' moment of the Relational Fabric."
 
@@ -102,11 +102,11 @@ The concern was real: had we invalidated our public-facing APIs? What affordance
 
 By attaching protocols to canons, we'd stumbled upon a true requirement we didn't realise we needed: **late-bound alignment**. The ability for an object to satisfy a contract not because it *is* a certain type, but because the canon it aligns with provides the necessary protocol logic to act as that type.
 
-This led to a concrete implementation model: for each object, we maintain three sets of tokens. The first tracks which axioms have been tested. The next tracks which axioms match. The final tracks which canons are entailed by the matched axioms. We can find an implementation by looking up canon–axiom pairs in the registry.
+This led to a concrete implementation model: for each object, we maintain three sets of tokens. The first tracks which axioms have been tested. The next tracks which axioms match. The final tracks which canons are entailed by the matched axioms. We can find an implementation by looking up canon-axiom pairs in the registry.
 
 This three-set token model (Tested, Matched, Entailed) transformed objects from static buckets of data into stateful semantic participants. It wasn't just a caching layer; it was a runtime deductive engine that paid the Logical Tax in the smallest possible increments.
 
-The key insight: we accumulate object metadata on demand, doing the minimum amount of work to achieve the goal asked for. Long-lived and frequently accessed objects reach a fixed point quickly–a state where the Logical Tax has been fully paid, and every subsequent interaction is a high-speed, zero-verification refund.
+The key insight: we accumulate object metadata on demand, doing the minimum amount of work to achieve the goal asked for. Long-lived and frequently accessed objects reach a fixed point quickly, a state where the Logical Tax has been fully paid, and every subsequent interaction is a high-speed, zero-verification refund.
 
 This grounded the abstraction in practical needs. We weren't building a wall; we were building a path that reinforces itself with use.
 
@@ -114,11 +114,11 @@ This grounded the abstraction in practical needs. We weren't building a wall; we
 
 ### The Dangerous Pivot: When Hashing Became a Propagator Network
 
-Before we continue, a brief primer: propagator networks, as described by Gerald Sussman and Alexey Radul in their foundational work, represent a structural shift in how we think about computation. In a propagator network, **cells** store values and **propagators** maintain relationships between cells. When a cell changes, its connected propagators automatically update dependent cells. The key distinction: propagators are bidirectional constraints, not unidirectional functions. If you declare A = B + C, changing A can propagate back to B or C. The network maintains these relationships automatically until it reaches quiescence–a stable state where all constraints are satisfied. (For full technical details, see the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md).)
+Before we continue, a brief primer: propagator networks, as described by Gerald Sussman and Alexey Radul in their foundational work, represent a structural shift in how we think about computation. In a propagator network, **cells** store values and **propagators** maintain relationships between cells. When a cell changes, its connected propagators automatically update dependent cells. The key distinction: propagators are bidirectional constraints, not unidirectional functions. If you declare A = B + C, changing A can propagate back to B or C. The network maintains these relationships automatically until it reaches quiescence, a stable state where all constraints are satisfied. (For full technical details, see the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md).)
 
 Then came the conversation shift that changed everything.
 
-We were talking about metadata management–how to track which axioms matched, which canons were entailed, how to invalidate efficiently when objects changed. We needed a way to maintain a "shadow graph" of WeakMap and WeakSet relationships to handle upward invalidation.
+We were talking about metadata management: how to track which axioms matched, which canons were entailed, how to invalidate efficiently when objects changed. We needed a way to maintain a "shadow graph" of WeakMap and WeakSet relationships to handle upward invalidation.
 
 I wrote:
 > "In fact, the shadow graph generalises to a propagator network specifically for communicating object changes and aggregate metadata."
@@ -128,11 +128,11 @@ I wrote:
 Gemini's response captured the shift perfectly:
 > "This is the 'Universal Adaptor' evolving into its final form: a **Distributed Propagator Network for Semantic State.**"
 
-We had moved beyond mere invalidation into collaborative computation. The shadow graph wasn't just tracking changes–it was becoming a reactive graph where the cost of any semantic claim was shared across every system that touched that data.
+We had moved beyond mere invalidation into collaborative computation. The shadow graph wasn't just tracking changes; it was becoming a reactive graph where the cost of any semantic claim was shared across every system that touched that data.
 
-The "Scream" protocol we'd been discussing wasn't just notification–it was a Propagator Pulse. Properties weren't just values–they were Cells in the propagator network.
+The "Scream" protocol we'd been discussing wasn't just notification; it was a Propagator Pulse. Properties weren't just values; they were Cells in the propagator network.
 
-This was a critical realisation: **Pulse** became the atomic unit of the system. Not operations, not events, not messages–Pulses. They are the fundamental unit that flows through the network, carrying updates from cell to cell. Every change, every propagation, every reconciliation happens through Pulses. The structure `[T, Tag, Args, Meta?]` became the universal packet–time-stamped, tagged, and carrying just enough information to update a cell.
+This was a critical realisation: **Pulse** became the atomic unit of the system. Not operations, not events, not messages: Pulses. They are the fundamental unit that flows through the network, carrying updates from cell to cell. Every change, every propagation, every reconciliation happens through Pulses. The structure `[T, Tag, Args, Meta?]` became the universal packet, time-stamped, tagged, and carrying just enough information to update a cell.
 
 Then came the dangerous question:
 > "Do we need anything from canon to implement this in canon, or have we discovered a new primitive?"
@@ -146,7 +146,7 @@ Gemini's answer was definitive: "We have discovered a **new primitive**, but it 
 The critical moment came when I realised:
 > "I think that the testing alone would swamp canon with somewhat irrelevant code."
 
-We had crossed a threshold. The "plumbing" had become so sophisticated and generally useful that it risked suffocating the "philosophy" of Canon. This primitive–the Propagator Network of Virtual Nodes and Change Sets–was actually a standalone infrastructure layer.
+We had crossed a threshold. The "plumbing" had become so sophisticated and generally useful that it risked suffocating the "philosophy" of Canon. This primitive, the Propagator Network of Virtual Nodes and Change Sets, was actually a standalone infrastructure layer.
 
 If we kept it inside Canon, we'd be forcing Canon to be a high-performance reactive state engine, when it should be a high-level semantic alignment framework.
 
@@ -156,13 +156,17 @@ This needed its own name. Its own project. Its own development lifecycle.
 
 We workshopped names, trying to find something divorced from the Relational Fabric nomenclature. The domain of nouns needed to come from either the propagator literature or the intent of the library.
 
-We explored four directions: refinement terms (like "Refine" or "Settle"), nervous system metaphors (like "Afferent" or "Synapse"), topological concepts (like "Lattice" or "Vertex"), and mechanical signals (like "Pulse" or "Impulse"). After discussing options like "Spindle," "Afferent," and "Lattice," I suggested: "What about suss after Gerald J. Sussman?"
+We explored four directions: refinement terms (like "Refine" or "Settle"), nervous system metaphors (like "Afferent" or "Synapse"), topological concepts (like "Lattice" or "Vertex"), and mechanical signals (like "Pulse" or "Impulse"). After discussing options like "Spindle," "Afferent," and "Lattice," I suggested:
 
-Gemini's response: "That is a perfect fit. **Suss** (or `suss-js`) honours the lineage of Propagator Networks while doubling as an evocative verb in modern English–to 'suss out' means to investigate, to understand, or to find the truth of a situation."
+> "What about suss after Gerald J. Sussman?"
+
+Gemini's response:
+
+> "That is a perfect fit. **Suss** (or `suss-js`) honours the lineage of Propagator Networks while doubling as an evocative verb in modern English–to 'suss out' means to investigate, to understand, or to find the truth of a situation."
 
 It neatly encapsulated what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it.
 
-We also realised this should be a toolkit, not a framework. The API became four functions: `append`, `compact`, `reduce`, `propagate`. This wasn't about managing state–it was about managing the calculus of change.
+We also realised this should be a toolkit, not a framework. The API became four functions: `append`, `compact`, `reduce`, `propagate`. This wasn't about managing state; it was about managing the calculus of change.
 
 The transition was clear: Howard (claims) → Canon (protocols) → Runtime type alignment → Protocols on canons → Fast type alignment → Structural object change detection → Propagator networks. Each step revealed the next layer that needed to exist.
 
@@ -178,11 +182,11 @@ This led to tagged op logs: `[TAG, old, new, T]`. The tag became the protocol ID
 
 The critical insight: time (`T`) came first, making every operation a "Time-Sorted Packet." This enabled causal ordering and serialisability. In a distributed graph split across an edge, we could detect gaps if patches arrived out of order. If a cell had state `[v1, v2, T10]` and received `[v3, v4, T12]`, it knew it had missed a transition at `T11`.
 
-But there was a deeper insight: **there is no generic "Set" operation.** All external entropy enters the system as **Observe** operations. An ObservePulse has the structure `[T, ObserveTag, [Path, Old, New], Meta?]`–it's both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic: the Pulse is accepted only if the cell's current value equals `Old`. If it doesn't match, the cell transitions to `stale` and seeks consensus. This wasn't a design choice–it was a requirement. Without it, we couldn't guarantee causal integrity across distributed boundaries.
+But there was a deeper insight: **there is no generic "Set" operation.** All external entropy enters the system as **Observe** operations. An ObservePulse has the structure `[T, ObserveTag, [Path, Old, New], Meta?]`: it's both the event (what was observed) and the operation (what is proposed). Compare-and-swap semantics are intrinsic: the Pulse is accepted only if the cell's current value equals `Old`. If it doesn't match, the cell transitions to `stale` and seeks consensus. This wasn't a design choice; it was a requirement. Without it, we couldn't guarantee causal integrity across distributed boundaries.
 
-The cell became an interpretation VM. Each cell was a tiny virtual machine defined by its `interpretation` function. All modification was done via communicating operations to yourself or other cells. > The op log itself became the value–in memory-space A, the value is the live POJO; across the edge, the value is the replayable log.
+The cell became an interpretation VM. Each cell was a tiny virtual machine defined by its `interpretation` function. All modification was done via communicating operations to yourself or other cells. > The op log itself became the value: in memory-space A, the value is the live POJO; across the edge, the value is the replayable log.
 
-This was more than a metaphor. Each cell truly is a virtual machine–it processes a sequence of Pulses through its interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value–it stores the operations, and the interpretation projects those operations into a value. This separation–between the stored operations (the CAnATL) and the interpretation (the VM)–is what makes cells serialisable. The operations are data. The interpretation is provided at runtime.
+This was more than a metaphor. Each cell truly is a virtual machine; it processes a sequence of Pulses through its interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell. Different cells can have different interpretations: one might interpret its CAnATL as an associative map, another as a sequence, another as a network itself. The cell doesn't store the value; it stores the operations, and the interpretation projects those operations into a value. This separation, between the stored operations (the CAnATL) and the interpretation (the VM), is what makes cells serialisable. The operations are data. The interpretation is provided at runtime.
 
 As we refined the model, we realised: "In this model, each cell is a tiny VM defined by 'interpretation'."
 
@@ -194,35 +198,59 @@ The toolkit API emerged:
 
 > This wasn't just for hashing anymore. This was a computational model.
 
-The result is RaCSTS–the theory–and Suss–the toolkit built to bring that theory into the real world.
+The result is RaCSTS, the theory, and Suss, the toolkit built to bring that theory into the real world.
 
 ---
 
-### The Organic Pivot: From Log-Based to P-REL Based
+### Naming the Structure: P-RAL
 
-As we refined the model, something subtle but important happened. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-REL based** (where operations lived in the Protocol-Relation domain).
+With the toolkit defined and the model taking shape, we needed to name the concrete data structure that would hold this network. We had three physical "buckets" of data: **Nodes** (state), **Relations** (logic), and **Parametric Edges** (binding + configuration). The edges needed to carry data elements to make relations parameterizable: the same relation could behave differently across different node pairs (e.g., "Shift by 5" vs "Shift by 10").
 
-This transition wasn't purposeful–it was organic. We didn't set out to redesign the architecture. We just kept following where the abstraction led.
+I asked Gemini:
 
-The key shift: instead of each change emitting individual pulses that triggered immediate propagation, we began using the **change time of the node** itself to trigger propagation. When a node's timestamp advanced, that became the signal to propagate–not a separate pulse for each individual operation.
+> "Is this already a known data structure? Are the relations parameterisable? Do the links need a data element?"
+
+Gemini's response:
+
+> "In terms of a known data structure, this is essentially a **Directed Labeled Property Graph (LPG)** or, even more specifically, a **Knowledge Graph** architecture. However, in standard CS terms, it is a **Relational Adjacency List**."
+
+But that didn't feel quite right. I pushed back:
+
+> "So is Relational Adjacency List enough even if we refine it a little, if not can we modify RAL with a prefixed term?"
+
+Gemini agreed that **RAL** alone undersold the architecture. A standard adjacency list implies a simple mapping from node to node, but in our structure, the adjacency is **mediated** by a third index (the Relation) and **parameterized** by a data element on the link itself.
+
+We needed a prefix to account for that third dimension. Gemini proposed three options: **P-RAL (Parametric Relational Adjacency List)**, **T-RAL (Triple-Indexed Relational Adjacency List)**, or **A-RAL (Associative Relational Adjacency List)**.
+
+I chose **P-RAL** because "triple" would lock us to the current count of indices; we'd need quads to describe a parametric link and 5-tuples to describe multiple networks, so it implied the specific instantiation too much. **Parametric** defined the capability without being dogmatic about the data shape.
+
+This gave us a clean pairing: **RaCSTS** (the logic model) implemented as a **P-RAL** (the physical structure).
+
+### The Organic Pivot: From Log-Based to P-RAL Based
+
+As we refined the model, something subtle but important happened. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-RAL based** (where operations lived in the Protocol-Relation domain).
+
+This transition wasn't purposeful; it was organic. We didn't set out to redesign the architecture. We just kept following where the abstraction led.
+
+The key shift: instead of each change emitting individual pulses that triggered immediate propagation, we began using the **change time of the node** itself to trigger propagation. When a node's timestamp advanced, that became the signal to propagate, not a separate pulse for each individual operation.
 
 This had profound implications. By only using the pulse to communicate change, and by using the node's change time as the trigger, we enabled **collection semantics**. Multiple changes to a node could be batched. The system could wait for quiescence before propagating, collecting all the mutations that happened within a single logical tick.
 
-The performance benefits were immediate. Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimisation–it was a fundamental shift in how the network reasoned about change.
+The performance benefits were immediate. Instead of propagating every individual operation (which could mean hundreds of pulses for a single batch update), the system could collect all changes, compact them, and emit a single pulse representing the net effect. This wasn't just an optimisation; it was a fundamental shift in how the network reasoned about change.
 
 Collection semantics opened up optimisation opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
 
-This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state–they were part of the state itself.
+This organic evolution from log-based to P-RAL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-RAL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state; they were part of the state itself.
 
 ### The Departure: From Pipes to Filters
 
-As we refined the model, another subtle but critical shift occurred. Initially, we assumed that pulses would propagate directly to nodes–links were just "pipes" that carried pulses from one node to another. But when we defined Link Relations, we departed from this model entirely.
+As we refined the model, another subtle but critical shift occurred. Initially, we assumed that pulses would propagate directly to nodes; links were just "pipes" that carried pulses from one node to another. But when we defined Link Relations, we departed from this model entirely.
 
 > "Until now, we assumed links were just 'pipes.' But in a serialisable propagator network, the **Link is a Filter/Transformer.**"
 
-A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**–not just passing pulses through. This wasn't just a refinement–it was a fundamental departure from automatic propagation.
+A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**, not just passing pulses through. This wasn't just a refinement; it was a fundamental departure from automatic propagation.
 
-Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**.
+Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-RAL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**.
 
 This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value. The propagation policy is part of the data structure itself, not a runtime behaviour.
 
@@ -234,19 +262,19 @@ As we formalised the system, we realised there were four distinct layers in how 
 
 **1. Relations → Provide New Values**
 
-Link Relations are pure functions that compute proposed values. They receive full node objects (with value, state, meta, and timestamp) and return new values that satisfy the relationship: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`. They don't mutate nodes–they propose values.
+Link Relations are pure functions that compute proposed values. They receive full node objects (with value, state, meta, and timestamp) and return new values that satisfy the relationship: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`. They don't mutate nodes; they propose values.
 
 **2. Implementation → Updates Conditionally (Timestamp Increases)**
 
-The implementation decides whether to accept the relation's proposal. Nodes are updated only if the timestamp advances: `T_new > T_current`. This is conditional–not every relation execution results in a node update. The timestamp increment is the signal that a node actually changed.
+The implementation decides whether to accept the relation's proposal. Nodes are updated only if the timestamp advances: `T_new > T_current`. This is conditional: not every relation execution results in a node update. The timestamp increment is the signal that a node actually changed.
 
 **3. DELTA Op → Generates RECV of Pulses**
 
-When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-REL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state–it emits RECV pulses for communication. This is the boundary between local state and network communication.
+When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-RAL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state; it emits RECV pulses for communication. This is the boundary between local state and network communication.
 
 **4. System Logs/Transmits RECV as Change Message**
 
-RECV pulses are logged and/or transmitted as change messages. This is the gossip layer–RECV becomes the message format. The system merges inbound DELTA with outbound data for naive gossip, ensuring information diffuses through the network.
+RECV pulses are logged and/or transmitted as change messages. This is the gossip layer: RECV becomes the message format. The system merges inbound DELTA with outbound data for naive gossip, ensuring information diffuses through the network.
 
 This four-layer distinction matters because:
 - Relations are pure and don't mutate
@@ -258,7 +286,7 @@ The separation between computation (relations), conditional updates (implementat
 
 ### Internal Propagation: Round-Based Coordination
 
-It's crucial to understand that **internal propagation** within a single P-REL is fundamentally different from **communication** between P-RELs. Internal propagation uses the node's change time (timestamp) as the coordination mechanism:
+It's crucial to understand that **internal propagation** within a single P-RAL is fundamentally different from **communication** between P-RALs. Internal propagation uses the node's change time (timestamp) as the coordination mechanism:
 
 **Each Propagation Round:**
 
@@ -267,24 +295,24 @@ It's crucial to understand that **internal propagation** within a single P-REL i
 3. **Relation Resolution**: Resolve the relation function for each matched link
 4. **Relation Execution**: Run the relation: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`
 5. **Conditional Update**: Update the target node only if needed (using the round-specific T), which advances the node's timestamp
-6. **P-REL T Update**: Update the P-REL's global timestamp
+6. **P-RAL T Update**: Update the P-RAL's global timestamp
 7. **Iteration Check**: If `round < max_rounds` and nodes were updated, repeat from step 1
 
-This continues until quiescence–a round where no nodes are updated. The method is deterministic and monotonic: nodes only advance forward in time, and the system always makes progress toward a fixed point. The key insight is using the node's change time as the signal for what needs to propagate, rather than maintaining explicit change lists or event queues.
+This continues until quiescence, a round where no nodes are updated. The method is deterministic and monotonic: nodes only advance forward in time, and the system always makes progress toward a fixed point. The key insight is using the node's change time as the signal for what needs to propagate, rather than maintaining explicit change lists or event queues.
 
 **Why This Matters:**
 
-Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is separate from the communication layer that handles synchronisation between different P-REL instances.
+Internal propagation is about **local consistency** within a single P-RAL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is separate from the communication layer that handles synchronisation between different P-RAL instances.
 
 ---
 
-### Communication Between P-RELs: RECV and SYNC
+### Communication Between P-RALs: RECV and SYNC
 
-While internal propagation handles consistency within a P-REL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RELs. This is the gossip layer that enables distributed convergence.
+While internal propagation handles consistency within a P-RAL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RALs. This is the gossip layer that enables distributed convergence.
 
 **On OBSERVE:**
 
-When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RELs, seeking consensus.
+When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RALs, seeking consensus.
 
 **On SYNC:**
 
@@ -318,7 +346,7 @@ RECV is the communication entrypoint:
 for each node in incoming dictionary:
   T_last = get_last_T(node) from vector_clock
   filtered_pulses = filter pulses where T_incoming > T_last
-  merge filtered_pulses into P-REL.meta (append)
+  merge filtered_pulses into P-RAL.meta (append)
   process each pulse
 ```
 
@@ -329,29 +357,29 @@ DELTA collects changes since the last DELTA execution:
 ```pseudocode
 changes = collect_changes_since_last_delta()
 change_dict = {nodeId: Pulse[]} with your changes
-merge other_node_pulses from P-REL.meta (set in RECV)
-clear P-REL.meta recorded pulses
-update last_delta_time in P-REL.meta
+merge other_node_pulses from P-RAL.meta (set in RECV)
+clear P-RAL.meta recorded pulses
+update last_delta_time in P-RAL.meta
 return RECV with change_dict
 ```
 
-This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–is what makes RaCSTS both locally deterministic and globally convergent. The iterative propagation rounds ensure each P-REL reaches quiescence, while RECV/SYNC ensures multiple P-RELs converge to consensus.
+This separation, internal propagation for local consistency, RECV/SYNC for distributed communication, is what makes RaCSTS both locally deterministic and globally convergent. The iterative propagation rounds ensure each P-RAL reaches quiescence, while RECV/SYNC ensures multiple P-RALs converge to consensus.
 
 ### The Clock Evolution: From Datetime to Vector to Hybrid Logical Clock
 
-One of the most detailed discussions in our conversation was about the structure of `T`–the timestamp that provides causal ordering. This wasn't just a technical detail–it was a fundamental evolution from simple timekeeping to a sophisticated distributed coordination mechanism.
+One of the most detailed discussions in our conversation was about the structure of `T`, the timestamp that provides causal ordering. This wasn't just a technical detail; it was a fundamental evolution from simple timekeeping to a sophisticated distributed coordination mechanism.
 
 **The Starting Point: T as Opaque and Monotonic**
 
-We began with a simple constraint: `T` is opaque (ish) and monotonic with respect to the context. This meant that for a single P-REL, you could use a simple logical integer clock (via a T property). But for multiple P-RELs, you might need vector clocks to detect causality across boundaries.
+We began with a simple constraint: `T` is opaque (ish) and monotonic with respect to the context. This meant that for a single P-RAL, you could use a simple logical integer clock (via a T property). But for multiple P-RALs, you might need vector clocks to detect causality across boundaries.
 
-This abstraction was powerful–it let us defer the specific implementation while enforcing the fundamental rule: time never goes backwards.
+This abstraction was powerful; it let us defer the specific implementation while enforcing the fundamental rule: time never goes backwards.
 
 **The Vector Clock Model**
 
-The next step was recognising that if each CAATL had its own clock, then each operation must modify the CAATL. It was better to have a wall clock for CAATLs, which is configuration-dependent: either `P-RAL.T` for a single P-REL, or `{ [P-RAL.id]: P-RAL.T }` to always assume multiple P-RELs.
+The next step was recognising that if each CAATL had its own clock, then each operation must modify the CAATL. It was better to have a wall clock for CAATLs, which is configuration-dependent: either `P-RAL.T` for a single P-RAL, or `{ [P-RAL.id]: P-RAL.T }` to always assume multiple P-RALs.
 
-This moved `T` from being a property of individual cells to being an environmental/contextual property at the P-RAL level. The clock became a vector–a dictionary mapping P-RAL IDs to their timestamps. This allowed the system to track causality across multiple P-RELs without requiring a central coordinator.
+This moved `T` from being a property of individual cells to being an environmental/contextual property at the P-RAL level. The clock became a vector, a dictionary mapping P-RAL IDs to their timestamps. This allowed the system to track causality across multiple P-RALs without requiring a central coordinator.
 
 **The Hybrid Wall Clock: Timestamp-Leading**
 
@@ -379,17 +407,17 @@ But we still wanted physical clocks to converge. The solution was to embed clock
 
 This enables NTP-style clock synchronisation as an **optimisation overlay**. The Clocks Op (itself a Pulse in the relations index) processes these clock dictionaries, computing skew and offset. Over time, the `SyncedWall` values across the network converge, reducing the frequency of Epoch jumps.
 
-The crucial insight: **clock synchronisation is optional**. The system works correctly even if clocks never converge–the Epoch ensures linearisability regardless. Clock sync is just an optimisation that makes the system more efficient.
+The crucial insight: **clock synchronisation is optional**. The system works correctly even if clocks never converge; the Epoch ensures linearisability regardless. Clock sync is just an optimisation that makes the system more efficient.
 
 **The Default Epoch Value**
 
-The final decision was how to initialise a new P-REL. The answer: **`Epoch = UnixTime + skew`** at startup, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+The final decision was how to initialise a new P-RAL. The answer: **`Epoch = UnixTime + skew`** at startup, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
 
 This provides a global coarse sync without a central server. Even if two nodes have never met, their Epochs will be roughly in the same "galaxy." If a node has previously computed clock skew (either preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch. This allows nodes that have been part of the network before to start closer to the network's current causal generation.
 
-The Sway Rule handles the rest–if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch. But using prior skew information reduces the initial jump required.
+The Sway Rule handles the rest: if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch. But using prior skew information reduces the initial jump required.
 
-This decision stabilised the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensured that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising–it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+This decision stabilised the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensured that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising: it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
 
 ---
 
@@ -399,20 +427,20 @@ The journey wasn't linear. We almost got lost in abstraction. We almost trapped 
 
 There were moments of concern: "Are we taking this metaphor too far?" "Do we need to focus on the affordances we need vs. those that are enabled?" "Have we invalidated anything from the public-facing side?"
 
-But the gold was there. We discovered that propagator networks were the missing primitive. We discovered that networks could be serialisable values. We discovered that this computational model–this toolkit–was what TypeScript needed.
+But the gold was there. We discovered that propagator networks were the missing primitive. We discovered that networks could be serialisable values. We discovered that this computational model, this toolkit, was what TypeScript needed.
 
 > **The key realisation:** The "missing object" wasn't just a better hash function or a better metadata system. This realisation–that the relationship itself had to be a serialisable value–became the foundation for what I call RaCSTS (Relational and Causal State Transition System). The **Logic**–the relations between data points, the constraints that govern how values propagate–needed to be just as serialisable and inspectable as the data itself.
 
 > In traditional code, `a = b + c` is a transient execution. In a propagator network, that `+` is a living, serialisable relation.
 
-Making relations into data, values you could serialise, version, and reason about–is much of what Relational Fabric is all about. Here, we arrived at it again by turning the verbs (relations, constraints) into first-class values.
+Making relations into data, values you could serialise, version, and reason about, is much of what Relational Fabric is all about. Here, we arrived at it again by turning the verbs (relations, constraints) into first-class values.
 
 The lesson:
 > Sometimes you have to follow the abstraction where it leads.
 
-The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) – a specification for serialisable propagator networks as properly basic data structures.
+The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md), a specification for serialisable propagator networks as properly basic data structures.
 
-What started as a question about rewriting an ADR became a comprehensive whitepaper that formalises propagator networks as serialisable values. The network itself–its topology, state, and causal history–became a first-class artifact you can serialise, version, and reason about.
+What started as a question about rewriting an ADR became a comprehensive whitepaper that formalises propagator networks as serialisable values. The network itself, its topology, state, and causal history, became a first-class artifact you can serialise, version, and reason about.
 
 ---
 
@@ -420,7 +448,7 @@ What started as a question about rewriting an ADR became a comprehensive whitepa
 
 This journey revealed something important about the process of iterative refinement.
 
-Having a thinking partner–in this case, Gemini–allowed us to explore ideas in real-time. The back-and-forth nature of the conversation let us test assumptions, pivot when we hit walls, and recognise when we'd discovered something bigger than we intended.
+Having a thinking partner, in this case, Gemini, allowed us to explore ideas in real-time. The back-and-forth nature of the conversation let us test assumptions, pivot when we hit walls, and recognise when we'd discovered something bigger than we intended.
 
 The danger was real. We could have gotten lost in abstraction. We could have trapped ourselves with scope creep. We could have invalidated our public-facing APIs.
 
@@ -432,13 +460,13 @@ The balance between "infrastructure of suspicion" and "fabric of proof" extends 
 
 The promise is fulfilled, but differently than expected.
 
-Fast Value Hashing is still coming, but now it's built on a better foundation. RaCSTS provides the computational model–the specification for networks as serialisable values. Suss provides the toolkit–the four-function API for managing the calculus of change. Canon provides the semantic layer–protocols and axioms that give meaning to data. Howard provides the logic of claims–propositions that establish truth.
+Fast Value Hashing is still coming, but now it's built on a better foundation. RaCSTS provides the computational model, the specification for networks as serialisable values. Suss provides the toolkit, the four-function API for managing the calculus of change. Canon provides the semantic layer, protocols and axioms that give meaning to data. Howard provides the logic of claims, propositions that establish truth.
 
 The ecosystem works together: Suss (the propagator network), Canon (the relational fabric), and Howard (the claims system) compose into something that eliminates the Logical Tax through architecture, not just optimisation.
 
-This journey moved from discovery to specification. The [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) formalises everything we discovered through these conversations: propagator networks as serialisable values, cells as interpretation VMs, and networks as first-class artifacts. It's the Logic–the mathematical foundation that makes the architecture possible.
+This journey moved from discovery to specification. The [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) formalises everything we discovered through these conversations: propagator networks as serialisable values, cells as interpretation VMs, and networks as first-class artifacts. It's the Logic, the mathematical foundation that makes the architecture possible.
 
-The [Suss toolkit](https://github.com/RelationalFabric/suss) is the implementation–the practical TypeScript library that brings RaCSTS to life. It's the Heart–the code that makes the specification real.
+The [Suss toolkit](https://github.com/RelationalFabric/suss) is the implementation, the practical TypeScript library that brings RaCSTS to life. It's the Heart, the code that makes the specification real.
 
 If you're ready to see the math that traps the abstraction, start with the [RaCSTS whitepaper](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md); if you're ready to start coding, head to the [Suss toolkit](https://github.com/RelationalFabric/suss).
 
@@ -446,9 +474,9 @@ The journey from hashing to networks wasn't planned. But it was necessary. Somet
 
 Sometimes there's gold in them thar hills.
 
-By turning the relations into data, the abstraction no longer 'escapes' into the ether of side-effects–it stays exactly where we can see it, sync it, and trust it.
+By turning the relations into data, the abstraction no longer 'escapes' into the ether of side-effects; it stays exactly where we can see it, sync it, and trust it.
 
-That's why I'm building Suss–to catch the abstraction before it runs away.
+That's why I'm building Suss: to catch the abstraction before it runs away.
 
 ---
 
@@ -531,12 +559,12 @@ This name tells you exactly what it is: a Hybrid Logical Clock where the Epoch i
 Finding the right name for the algorithm took several iterations. We tried various approaches, each revealing something about what we were actually building:
 
 - **Transitive Belief Reconciliation (TBR)**: Too vague, sounded philosophical rather than technical
-- **Probabilistic Skew-Agreement Protocol (PSAP)**: Implied explicit consensus, which we didn't have—we had tacit, asymptotic consensus
+- **Probabilistic Skew-Agreement Protocol (PSAP)**: Implied explicit consensus, which we didn't have; we had tacit, asymptotic consensus
 - **Probabilistic Skew Reconciliation (PSR)**: "Reconciliation" gave non-monotonic vibes, which was dangerous for a clock system
 - **Gossiped Probabilistic Evidence Reconciliation (GPER)**: "Evidence Integration" was just jargon for "Belief"
 - **Gossiped Inertial Belief (GIB)**: Getting closer, but missing something about the nature of the system
 - **Gossiped Inertial Belief Propagation (GIBP)**: Better, but "Propagation" implied explicit propagation, when it was actually a side effect of gossip
-- **Believed Inertial Time Frame (BITF)**: This captured what we were actually describing—a state of being rather than a process. It treats the node's temporal perspective as a local coordinate system that is steady (Inertial) and subjective (Believed)
+- **Believed Inertial Time Frame (BITF)**: This captured what we were actually describing: a state of being rather than a process. It treats the node's temporal perspective as a local coordinate system that is steady (Inertial) and subjective (Believed)
 - **Gossiped Believed Inertial Time Frame (G-BITF)**: The final name, appending the transport mechanism (Gossiped) to the state (BITF) to describe the specific implementation
 
 Gemini's response:
@@ -557,4 +585,4 @@ Instead of nodes "swaying" to match a leader, each node maintains its own **Beli
 
 The EHLC-S structure provides the coordinate system, while G-BITF provides the mechanism for those coordinates to evolve. Together, they create a self-stabilising causal environment where time becomes a frame of reference, not an absolute truth.
 
-The lesson here is different from the main article. Abstractions are never perfect, and sometimes they're just wrong. Taking your new abstractions and playing with them—in your head, on paper, a whiteboard, or in code—is the only way to know how good they are. And when they fail, you iterate. The flaw in the original clock design wasn't a failure; it was an opportunity to discover something better. The journey from the Sway Rule to G-BITF shows that sometimes the abstraction needs to escape completely before you can see what it really wants to be.
+The lesson here is different from the main article. Abstractions are never perfect, and sometimes they're just wrong. Taking your new abstractions and playing with them, in your head, on paper, a whiteboard, or in code, is the only way to know how good they are. And when they fail, you iterate. The flaw in the original clock design wasn't a failure; it was an opportunity to discover something better. The journey from the Sway Rule to G-BITF shows that sometimes the abstraction needs to escape completely before you can see what it really wants to be.

@@ -29,7 +29,7 @@ Familiarity with reactive programming (React, RxJS, MobX), state management patt
 **What is delivered:**
 
 - **RaCSTS Specification** (§6): A formal definition of propagator networks as serialisable values, grounded in State Transition Systems [15] (§6.1). Includes complete type hierarchy (§6.2), model entities (§6.4), and functional primitives (§6.5).
-- **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serialisability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-REL serialisation (§7.2).
+- **Implementable Model** (§7): Complete architecture with operational semantics (§7.4), serialisability guarantees (§7.2), and distributed systems support (§7.5-7.6). Demonstrates "distributed systems as data" through P-RAL serialisation (§7.2).
 - **Suss Toolkit** (§8): Reference TypeScript implementation demonstrating practical application. Includes performance analysis (§8.4) and usage patterns (§8.5).
 
 **What is not delivered:**
@@ -44,7 +44,7 @@ RaCSTS is not a UI framework, database system, or network transport protocol. It
 
 ### 1.0 A Day in This World
 
-You open a bug report. Instead of log statements and stack traces, there's a P-REL snapshot file attached—a complete serialisation of the network state at the moment of failure. You load it into your local environment and it resumes instantly: same topology, same values, same causal history. You step backward through time, watching the propagation ripple in reverse. The problematic constraint reveals itself. You fix the relation, serialise the corrected network, and send it back. The entire debugging session took minutes, not hours.
+You open a bug report. Instead of log statements and stack traces, there's a P-RAL snapshot file attached—a complete serialisation of the network state at the moment of failure. You load it into your local environment and it resumes instantly: same topology, same values, same causal history. You step backward through time, watching the propagation ripple in reverse. The problematic constraint reveals itself. You fix the relation, serialise the corrected network, and send it back. The entire debugging session took minutes, not hours.
 
 This isn't science fiction. This is the world that becomes possible when networks are values.
 
@@ -195,9 +195,9 @@ This requires three conceptual shifts:
 
 **Cells as Interpretation VMs:** Each cell is not merely a container for a value. It is a virtual machine that processes a sequence of operations (Pulses) through an interpretation function to produce a materialised value. The interpretation is the "microcode" of the cell.
 
-**P-REL as Blueprint:** The network topology, links, and causal markers exist as a serialisable structure called P-REL (Parallel Relational Layer). The P-REL contains everything needed to resume the network, but it contains no executable logic—only references to logic.
+**P-RAL as Blueprint:** The network topology, links, and causal markers exist as a serialisable structure called P-RAL (Parametric Relational Adjacency List). The P-RAL contains everything needed to resume the network, but it contains no executable logic—only references to logic.
 
-**Separation of Blueprint and Runtime:** Nodes and relations are opaque within the P-REL. They exist only as identifiers. At runtime, a Node Resolver and Relation Resolver provide the actual implementations. This separation is what enables portability.
+**Separation of Blueprint and Runtime:** Nodes and relations are opaque within the P-RAL. They exist only as identifiers. At runtime, a Node Resolver and Relation Resolver provide the actual implementations. This separation is what enables portability.
 
 ### 4.2 What This Makes Possible
 
@@ -279,13 +279,13 @@ This is what RaCSTS provides: a specification for networks as serialisable value
 
 RaCSTS is defined by three pillars:
 
-**P-REL (Parallel Relational Layer):** The serialisable blueprint containing nodes, relations, links (array), meta, and asOf (T). P-REL is independent of RaCSTS and is a sparse encoding—not a direct conversion of entire user objects. Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. P-REL is passive—it contains no executable logic, only references to logic.
+**P-RAL (Parametric Relational Adjacency List):** The serialisable blueprint containing nodes, relations, links (array), meta, and asOf (T). P-RAL is independent of RaCSTS and is a sparse encoding—not a direct conversion of entire user objects. Only the P-RAL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. P-RAL is passive—it contains no executable logic, only references to logic.
 
-**Node Resolver:** A function `fn(nodeId, P-REL) -> RealNode` that resolves opaque node identifiers in P-REL to concrete node implementations with a standard interface.
+**Node Resolver:** A function `fn(nodeId, P-RAL) -> RealNode` that resolves opaque node identifiers in P-RAL to concrete node implementations with a standard interface.
 
-**Relation Resolver:** A function `fn(relationId, P-REL) -> RealRelation` that resolves opaque relation identifiers in P-REL to concrete relation functions with the signature `fn(src, tgt, meta) -> [srcV, tgtV, meta']`.
+**Relation Resolver:** A function `fn(relationId, P-RAL) -> RealRelation` that resolves opaque relation identifiers in P-RAL to concrete relation functions with the signature `fn(src, tgt, meta) -> [srcV, tgtV, meta']`.
 
-This three-pillar architecture achieves complete separation of concerns: P-REL is pure data (serialisable), while resolvers provide environment-specific implementations (runtime).
+This three-pillar architecture achieves complete separation of concerns: P-RAL is pure data (serialisable), while resolvers provide environment-specific implementations (runtime).
 
 ### 6.2 The Type Hierarchy: Properly Basic Data Structures
 
@@ -320,7 +320,7 @@ Each layer wraps the previous, adding semantic structure (tags, annotations, cau
 - **Epoch** is a logical counter that serves as the "Causal Ratchet," ensuring linear order when nodes are too far apart to reconcile
 - **Wall** is the immutable physical hardware timestamp (the "Local Witness")
 - **Skew** is a first-class, mutable property representing the node's belief about its deviation from the network mean time
-- **Idx** disambiguates concurrent events and uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RELs
+- **Idx** disambiguates concurrent events and uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RALs
 
 This **Epoch-led Hybrid Logical Clock with Skew (EHLC-S)** structure [5] implements a **Gossiped Believed Inertial Time Frame (G-BITF)** model, extending Lamport's logical clocks [2] with physical time components and relativistic frame translation. The nested structure `[Wall, Skew]` implements a Galilean coordinate system where Wall is the invariant proper time and Skew is the frame translation, enabling distributed time consensus through implicit inertial frame translation rather than explicit synchronisation.
 
@@ -374,11 +374,11 @@ To bridge the formal type hierarchy with operational semantics, we define the en
 
 **Critical Design Decision:** There is no generic "Set" operation—all external entropy enters as Observe operations. This is not an implementation detail but a fundamental architectural choice. Without this constraint, we cannot guarantee causal integrity across distributed boundaries. The compare-and-swap semantics are intrinsic to the Pulse structure itself, not layered on top. This design ensures that every external change is both an observation (what was seen) and a proposal (what should be), with the cell's current state serving as the validation gate.
 
-**Op Relation:** External operation that introduces entropy into the network. Signature: `op(P-REL, args, P-REL-meta) -> [delta-P-REL, Pulse[], meta']`. Op Relations are the entry points for external change—they create new Pulses that disturb the network from its quiescent state.
+**Op Relation:** External operation that introduces entropy into the network. Signature: `op(P-RAL, args, P-RAL-meta) -> [delta-P-RAL, Pulse[], meta']`. Op Relations are the entry points for external change—they create new Pulses that disturb the network from its quiescent state.
 
 **Link Relation:** Internal propagation logic between cells. Signature: `link(src, tgt, meta) -> [srcV, tgtV, meta']`. Link Relations maintain relationships between cells—they are the "constraints" or "physics" of the network.
 
-**From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-REL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value—the propagation policy is part of the data structure itself, not a runtime behaviour.
+**From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-RAL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value—the propagation policy is part of the data structure itself, not a runtime behaviour.
 
 **Change Set:** A collection of operations applied to cells. Used by toolkit primitives for adding operations, collapsing redundant operations, materialising values, and computing constraint alignments. Change Sets batch operations for efficient application.
 
@@ -394,12 +394,12 @@ RaCSTS defines two classes of primitives for network operation:
 
 #### Op Relations: External Operations
 
-**Signature:** `op(P-REL, args, P-REL-meta) -> [delta-P-REL, Pulse[], meta']`
+**Signature:** `op(P-RAL, args, P-RAL-meta) -> [delta-P-RAL, Pulse[], meta']`
 
-Op Relations operate on the P-REL structure itself. They:
+Op Relations operate on the P-RAL structure itself. They:
 - Modify network topology (add/remove cells, links)
 - Emit Pulses that update CAnATL structures
-- Update P-REL metadata
+- Update P-RAL metadata
 
 Op Relations are the boundary between the external world and the network. They transform external events into Pulses that the network can process.
 
@@ -518,7 +518,7 @@ RaCSTS defines six standard higher-order relations that provide common propagati
 - Triggered when any source node in the collection is updated
 - Enables reduce and join to operate over sets of nodes
 
-These standard relations make the P-REL predictable and analysable—a host receiving a value knows exactly what a `linear` or `reduce` link does without inspecting code, enabling potential hardware-level or optimised runtime execution.
+These standard relations make the P-RAL predictable and analysable—a host receiving a value knows exactly what a `linear` or `reduce` link does without inspecting code, enabling potential hardware-level or optimised runtime execution.
 
 **Link Relation Return Patterns:**
 
@@ -643,22 +643,22 @@ A quiescent state is reached when a full propagation round produces no accepted 
 #### Serialisable Consistency
 
 **Operational Definition:**
-- **Pack operation:** Serialise P-REL (all CAnATL structures, topology, links) to a format (JSON, MessagePack, etc.)
-- **Unpack operation:** Deserialise format back to P-REL with identical structure
-- **Invariant:** `unpack(pack(P-REL)) === P-REL` (deterministic round-trip)
+- **Pack operation:** Serialise P-RAL (all CAnATL structures, topology, links) to a format (JSON, MessagePack, etc.)
+- **Unpack operation:** Deserialise format back to P-RAL with identical structure
+- **Invariant:** `unpack(pack(P-RAL)) === P-RAL` (deterministic round-trip)
 
 **Preservation Requirements:**
 - All cell values must be preserved
 - All timestamps (T) must be preserved  
 - All topology (nodes, links) must be preserved
-- Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically
+- Core P-RAL structure (nodes, links, relations, meta, asOf) must round-trip identically
 
 **Metadata Guarantees:**
 - Metadata has zero guarantees regarding preservation during serialisation cycles
 - Implementations may discard, modify, or ignore metadata
 - Metadata can be used for optimisation (e.g., caching serialised representations) but must not be relied upon for correctness
 
-Pack and unpack are inverses for the core P-REL structure. A serialised network, when deserialised, is indistinguishable from the original in terms of nodes, links, relations, meta, and asOf. Metadata may differ.
+Pack and unpack are inverses for the core P-RAL structure. A serialised network, when deserialised, is indistinguishable from the original in terms of nodes, links, relations, meta, and asOf. Metadata may differ.
 
 #### Scale Invariance
 
@@ -695,13 +695,13 @@ Meta-circularity is not a feature—it's a consequence of properly basic recursi
 
 RaCSTS achieves serialisability through strict separation of concerns:
 
-**Blueprint (P-REL) vs. Runtime (Resolvers):** P-REL is independent of RaCSTS and contains nodes, links, relations, meta, and T. It contains only data—no executable code. At runtime, Node Resolvers and Relation Resolvers provide the implementations referenced by identifiers.
+**Blueprint (P-RAL) vs. Runtime (Resolvers):** P-RAL is independent of RaCSTS and contains nodes, links, relations, meta, and T. It contains only data—no executable code. At runtime, Node Resolvers and Relation Resolvers provide the implementations referenced by identifiers.
 
-**Opaque Design:** Both nodes and relations are opaque within the P-REL. P-REL stores node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). Relations are implementation-dependent structures. This opacity is what enables portability—the same P-REL can work with different resolver implementations in different environments.
+**Opaque Design:** Both nodes and relations are opaque within the P-RAL. P-RAL stores node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). Relations are implementation-dependent structures. This opacity is what enables portability—the same P-RAL can work with different resolver implementations in different environments.
 
-**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
+**Sparse Encoding:** P-RAL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-RAL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
 
-**Serialisation Boundary:** The serialisation boundary is precisely the P-REL structure (nodes, links, relations, meta, asOf). Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. Only the P-REL structure itself is guaranteed serialisable. Everything outside the P-REL (resolvers, runtime state) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
+**Serialisation Boundary:** The serialisation boundary is precisely the P-RAL structure (nodes, links, relations, meta, asOf). Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations. Only the P-RAL structure itself is guaranteed serialisable. Everything outside the P-RAL (resolvers, runtime state) is provided at runtime. This makes it trivial to reason about what can be transmitted and what must be locally available.
 
 ### 7.2 The Toolkit Primitives
 
@@ -737,18 +737,18 @@ These four operations are sufficient to build any propagator network. Higher-lev
 
 To implement RaCSTS, you must provide:
 
-#### P-REL Structure
+#### P-RAL Structure
 
-The P-REL must contain:
+The P-RAL must contain:
 - **Nodes:** Map of node IDs to node structures `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation)
 - **Relations:** Map of relation IDs to relation structures (implementation-dependent, opaque references)
 - **Links:** Array of link specifications `[src-selector, tgt-selector, relation-id, args, meta, label?]`
-- **Meta:** P-REL-level metadata (ATL)
-- **asOf:** Current logical timestamp (T) for the P-REL
+- **Meta:** P-RAL-level metadata (ATL)
+- **asOf:** Current logical timestamp (T) for the P-RAL
 
-**Sparse Encoding:** P-REL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-REL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
+**Sparse Encoding:** P-RAL is not a direct conversion of entire user objects. It is a sparse encoding of only what needs to be communicated. For example, in a shadow graph implementation, much of a node's state may be WeakRefs (not serialisable), but literals are opaque—only the rest of P-RAL (nodes, links, relations, meta, asOf) is guaranteed to be serialisable. The tagged literal structure allows sparse encoding where tags dispatch to the appropriate interpretation, enabling efficient representation of only the essential state.
 
-Everything in the P-REL must be serialisable to JSON or equivalent.
+Everything in the P-RAL must be serialisable to JSON or equivalent.
 
 #### Link Selector Syntax
 
@@ -837,7 +837,7 @@ Expands to:
   (all automatically, without explicit links)
 ```
 
-Template links transform the P-REL from a static graph into a **generative graph architecture**—the value size stays constant even as the number of nodes grows.
+Template links transform the P-RAL from a static graph into a **generative graph architecture**—the value size stays constant even as the number of nodes grows.
 
 #### Node Interface
 
@@ -847,7 +847,7 @@ A RealNode (returned by Node Resolver) must provide:
 - **meta:** Metadata (ATL)
 - **asOf:** Timestamp (T) of last update
 
-Nodes in P-REL are `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). In RaCSTS, the value is opaque. In Suss, the value is ATL. P-REL is a sparse encoding—not a direct conversion of entire user objects. Much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque; only the P-REL structure is guaranteed serialisable.
+Nodes in P-RAL are `{ value: ATL, asOf: T, lineage, meta: ATL }` where value is ATL (tagged literals dispatch on tag for interpretation). In RaCSTS, the value is opaque. In Suss, the value is ATL. P-RAL is a sparse encoding—not a direct conversion of entire user objects. Much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque; only the P-RAL structure is guaranteed serialisable.
 
 The Node interface is the contract between the system and node implementations.
 
@@ -869,7 +869,7 @@ Pack and unpack operations must:
 - **Serialise CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, [Wall, Skew], Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
 - **Serialise Values:** Values are `AnATL | AnTL`, which serialise as nested JavaScript structures
 - **Preserve Structure:** Recursive ATL structure must round-trip perfectly
-- **Deterministic:** Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically. Metadata has zero guarantees and may differ.
+- **Deterministic:** Core P-RAL structure (nodes, links, relations, meta, asOf) must round-trip identically. Metadata has zero guarantees and may differ.
 
 Serialisation is not an afterthought—it is the fundamental capability of the system.
 
@@ -889,7 +889,7 @@ The implementation decides whether to accept the relation's proposal. Nodes are 
 
 **3. DELTA Op → Generates RECV of Pulses**
 
-When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-REL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state—it emits RECV pulses for communication. This is the boundary between local state and network communication. DELTA acts as a router, determining which nodes should receive which pulses.
+When nodes are updated (timestamp increased), DELTA generates RECV pulses: `DELTA(P-RAL_state, Pulse_in) -> [RECV, { [nodeID]: Pulse_out[] }]`. DELTA doesn't just update state—it emits RECV pulses for communication. This is the boundary between local state and network communication. DELTA acts as a router, determining which nodes should receive which pulses.
 
 **4. System Logs/Transmits RECV as Change Message**
 
@@ -906,17 +906,17 @@ The separation between computation (relations), conditional updates (implementat
 #### Op Execution: Introducing Entropy
 
 When an Op Relation executes:
-1. Receives current P-REL, operation arguments, and P-REL metadata
-2. Modifies P-REL structure (adds/removes nodes, links)
+1. Receives current P-RAL, operation arguments, and P-RAL metadata
+2. Modifies P-RAL structure (adds/removes nodes, links)
 3. Creates Pulses `[T, op, ...args]` with T > any existing T in affected nodes
-4. Emits Pulses and delta-P-REL
-5. Returns updated P-REL metadata
+4. Emits Pulses and delta-P-RAL
+5. Returns updated P-RAL metadata
 
 Observe Pulse acceptance is the boundary between external events and internal propagation.
 
 #### Internal Propagation: Round-Based Coordination
 
-Internal propagation within a single P-REL uses the node's change time (timestamp) as the coordination mechanism. This is **separate** from the communication layer (RECV/SYNC) that handles synchronisation between different P-REL instances.
+Internal propagation within a single P-RAL uses the node's change time (timestamp) as the coordination mechanism. This is **separate** from the communication layer (RECV/SYNC) that handles synchronisation between different P-RAL instances.
 
 **Each Propagation Round:**
 
@@ -925,14 +925,14 @@ Internal propagation within a single P-REL uses the node's change time (timestam
 3. **Relation Resolution:** Resolve the relation function for each matched link
 4. **Relation Execution:** Run the relation: `link(srcNode, tgtNode, meta) -> [srcValue, tgtValue, meta']`
 5. **Conditional Update:** Update the target node only if needed (using the round-specific T), which advances the node's timestamp
-6. **P-REL T Update:** Update the P-REL's global timestamp
+6. **P-RAL T Update:** Update the P-RAL's global timestamp
 7. **Iteration Check:** If `round < max_rounds` and nodes were updated, repeat from step 1
 
 This continues until quiescence–a round where no nodes are updated. The method is deterministic and monotonic: nodes only advance forward in time, and the system always makes progress toward a fixed point. The key insight is using the node's change time as the signal for what needs to propagate, rather than maintaining explicit change lists or event queues.
 
 **Why This Separation Matters:**
 
-Internal propagation is about **local consistency** within a single P-REL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is fundamentally different from the communication layer (RECV/SYNC) that handles synchronisation between different P-REL instances in a distributed system.
+Internal propagation is about **local consistency** within a single P-RAL. It's the mechanism that ensures all Link Relations are satisfied within the local network. This is fundamentally different from the communication layer (RECV/SYNC) that handles synchronisation between different P-RAL instances in a distributed system.
 
 #### Quiescence Detection: Stability
 
@@ -949,13 +949,13 @@ In adversarial cases (pathological dependency graphs), propagation might not qui
 - **MaxRounds:** Limit on propagation rounds within a logical time step
 - **Progress Evidence:** T-ordering provides evidence of forward progress—each operation increases T, showing the system is not stuck
 - **Bounded Runtime:** If MaxRounds is reached, system halts with current state
-- **Partial Results:** Current P-REL state represents partial progress toward quiescence
+- **Partial Results:** Current P-RAL state represents partial progress toward quiescence
 
 **Important:** Circuit breakers are a bounded execution mechanism, not a correctness guarantee. They prevent infinite loops in adversarial graphs but do not guarantee quiescence. Progress evidence (T-ordering) shows the system is making forward progress, but bounded execution may halt before full quiescence is reached.
 
-### 7.5 The Organic Evolution: From Log-Based to P-REL Based
+### 7.5 The Organic Evolution: From Log-Based to P-RAL Based
 
-As the system was refined, a subtle but important transition occurred. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-REL based** (where operations lived in the Protocol-Relation domain).
+As the system was refined, a subtle but important transition occurred. The system evolved from being **log-based** (where operations were stored as a sequence of events) to being **P-RAL based** (where operations lived in the Protocol-Relation domain).
 
 This transition wasn't purposeful—it was organic. The abstraction led the way.
 
@@ -967,7 +967,7 @@ This transition wasn't purposeful—it was organic. The abstraction led the way.
 
 **Optimisation Opportunities:** Collection semantics opened up optimisation opportunities that weren't possible with individual pulses. The system could detect when multiple operations cancelled each other out. It could merge redundant updates. It could defer expensive propagations until it knew the full scope of changes.
 
-This organic evolution from log-based to P-REL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-REL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state—they were part of the state itself.
+This organic evolution from log-based to P-RAL based wasn't planned, but it was necessary. The abstraction was teaching us that the structure of the data (the P-RAL domain) and the structure of the operations (the relations index) needed to be unified. The operations weren't separate from the state—they were part of the state itself.
 
 ### 7.6 Serialisability and Linearity in Distributed Systems
 
@@ -983,7 +983,7 @@ The T structure is always `[Epoch, [Wall, Skew], Idx]`. This **Epoch-led Hybrid 
 - **Skew:** The **only mutable component**—a first-class property representing the node's current belief of its offset from the network's consensus frame. Skew is adjusted through inertial frame translation, allowing events to be "translated" into different local frames while preserving the original Wall as the invariant witness. The adjustment maintains strong inertia against rapid changes
 - **Idx:** Disambiguates concurrent events at the same wall time. Uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to encode internal propagation rounds
 
-The nested structure `[Wall, Skew]` implements a **Galilean coordinate system** where Wall is the invariant proper time and Skew is the frame translation. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
+The nested structure `[Wall, Skew]` implements a **Galilean coordinate system** where Wall is the invariant proper time and Skew is the frame translation. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. This structure makes the system linearisable not just within a single P-RAL, but across P-RALs—enabling distributed coordination while maintaining serialisability.
 
 **Key Principle:** Wall is immutable. Only Skew is adjusted. This allows the originator to recognise its own events (via the original Wall) while peers "translate" that event into their local frame of reference (via Skew adjustment).
 
@@ -1159,7 +1159,7 @@ Each transmission bundle contains:
 - `T_Sync`: The sender's current `[Epoch, [Wall, Skew], Idx]` (with Idx containing fractional round if mid-propagation)
 - `Pulse[]`: The array of state transitions being transmitted, each with its own `[Epoch, [Wall, Skew], Idx]` timestamp where Skews have been updated to reflect the sender's consensus belief
 
-**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, [Wall, Skew], Idx]` timestamp. The inertial belief mechanism ensures that when a P-REL receives a remote timestamp, it translates the event into its local frame by adjusting both the Epoch (for causal ordering) and the Skew (for frame translation), while maintaining strong inertia against rapid changes. The Skew component is first-class—it is not just an optimisation, but a fundamental mechanism for achieving distributed time consensus through Galilean frame translation.
+**Important:** When multiple P-RALs coordinate across multiple nodes, each P-RAL maintains its own `[Epoch, [Wall, Skew], Idx]` timestamp. The inertial belief mechanism ensures that when a P-RAL receives a remote timestamp, it translates the event into its local frame by adjusting both the Epoch (for causal ordering) and the Skew (for frame translation), while maintaining strong inertia against rapid changes. The Skew component is first-class—it is not just an optimisation, but a fundamental mechanism for achieving distributed time consensus through Galilean frame translation.
 
 **Causal Ratcheting:**
 
@@ -1180,7 +1180,7 @@ This mechanism makes clock synchronisation a **first-class causal property** rat
 
 #### Initialisation: Default Epoch and Skew Values
 
-When initialising a new P-REL, the system sets the initial timestamp T as: **`[Epoch, [Wall, Skew], Idx]`** where:
+When initialising a new P-RAL, the system sets the initial timestamp T as: **`[Epoch, [Wall, Skew], Idx]`** where:
 
 - **Epoch:** `Epoch = UnixTime + prior_skew`, where `prior_skew` is any prior known clock skew preserved in metadata or provided by a clock sync node. If no prior skew is available, `prior_skew = 0` and the epoch starts at UnixTime.
 - **Wall:** The current physical wall clock time at initialisation
@@ -1202,7 +1202,7 @@ This decision stabilises the "physics" of the system. By anchoring the Epoch to 
 
 #### Internal Linearisability: Fractional Idx Refinement
 
-The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearisability [6] **even outside individual P-RELs**—when multiple P-RELs are coordinating or when splitting a P-REL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
+The Idx component uses fractional refinement to enable strict ordering of internal propagation cycles without advancing physical time. The Idx value equals BaseIdx plus Round divided by MaxRounds. This fractional refinement provides linearisability [6] **even outside individual P-RALs**—when multiple P-RALs are coordinating or when splitting a P-RAL across distributed boundaries, the fractional Idx ensures unambiguous ordering.
 
 **Behaviour:**
 - **External input (Observe Pulse):** Increments BaseIdx, Round starts at 0
@@ -1212,34 +1212,34 @@ The Idx component uses fractional refinement to enable strict ordering of intern
 
 **Example:** When an external Observe Pulse arrives, T might be [5, [1704067200, 0], 42.00] (BaseIdx=42, Round=0, Skew=0). As links propagate, the Round increments: 42.01, 42.02, etc. When quiescence is reached at Round=5, T is [5, [1704067200, 0], 42.05]. The next external Observe Pulse increments BaseIdx to 43 and resets Round to 0, yielding [5, [1704067200, 0], 43.00].
 
-The fractional Idx allows strict ordering of the propagation wavefront without requiring wall clock advancement for each internal step. Critically, this makes timestamps from different P-RELs directly comparable—if P-REL A is at T=[5, [1704067200, 0], 42.03] and P-REL B is at T=[5, [1704067200, 0], 42.07], we can unambiguously order them even though they're separate networks. When comparing timestamps, the system uses `[Epoch, Wall + Skew, Idx]` to determine ordering.
+The fractional Idx allows strict ordering of the propagation wavefront without requiring wall clock advancement for each internal step. Critically, this makes timestamps from different P-RALs directly comparable—if P-RAL A is at T=[5, [1704067200, 0], 42.03] and P-RAL B is at T=[5, [1704067200, 0], 42.07], we can unambiguously order them even though they're separate networks. When comparing timestamps, the system uses `[Epoch, Wall + Skew, Idx]` to determine ordering.
 
 #### Implications for Serialisability
 
-This architecture ensures that P-REL serialisation preserves causal order across distributed boundaries:
+This architecture ensures that P-RAL serialisation preserves causal order across distributed boundaries:
 
-**When packing a P-REL:**
+**When packing a P-RAL:**
 - All T timestamps are serialised as `[Epoch, [Wall, Skew], Idx]` where Idx contains the fractional refinement
 - Both Wall and Skew are preserved exactly, maintaining the node's belief about its clock offset
 - Causal relationships are preserved in the Epoch ordering
 - Fractional Idx values are preserved exactly, maintaining internal propagation ordering
 
-**When unpacking a P-REL:**
+**When unpacking a P-RAL:**
 - Timestamps are restored exactly, including fractional Idx values and the [Wall, Skew] pair
 - The receiving node applies inertial frame translation to translate the unpacked timestamps into its local frame of reference
-- The Skew values from the unpacked P-REL are treated as evidence in the probabilistic consensus mechanism
+- The Skew values from the unpacked P-RAL are treated as evidence in the probabilistic consensus mechanism
 - Propagation can resume from the exact state where it was serialised
 - The fractional Idx allows the receiving node to correctly order unpacked operations relative to its own ongoing propagation
 
-**Cross-P-REL linearisability:**
-- A P-REL serialised on Node A can be deserialised on Node B
+**Cross-P-RAL linearisability:**
+- A P-RAL serialised on Node A can be deserialised on Node B
 - Node B's local clock may be completely different
 - The Epoch-based ordering ensures Node B correctly orders all operations relative to its local state
 - The inertial belief mechanism allows Node B to gradually adjust its belief about time while maintaining causal correctness and resisting rapid changes
-- The fractional Idx ensures operations from the unpacked P-REL interleave correctly with Node B's local propagation
+- The fractional Idx ensures operations from the unpacked P-RAL interleave correctly with Node B's local propagation
 - The probabilistic consensus mechanism actively pulls Node B's Skew toward the network mean, reducing future Epoch jumps
 
-This makes RaCSTS networks truly portable across distributed boundaries—serialisation and deserialisation are inverses that preserve all causal structure. The fractional Idx refinement is what enables linearisability **outside individual P-RELs**, allowing multiple P-RELs to coordinate or merge while maintaining strict causal ordering.
+This makes RaCSTS networks truly portable across distributed boundaries—serialisation and deserialisation are inverses that preserve all causal structure. The fractional Idx refinement is what enables linearisability **outside individual P-RALs**, allowing multiple P-RALs to coordinate or merge while maintaining strict causal ordering.
 
 ### 7.6 Leader-Free Consensus via Sync Op: Fixed-Point Gossip
 
@@ -1259,7 +1259,7 @@ The system achieves consensus without a leader through three foundational proper
 
 An **Observe rejection** occurs when an Observe Pulse arrives at a node but the `Old` value in the Pulse doesn't match the node's current state (Cur ≠ Old). This can happen when:
 - A node has been partitioned and rejoins the network
-- A P-REL is deserialised in a new environment
+- A P-RAL is deserialised in a new environment
 - Concurrent updates have diverged
 - A node speculatively committed a value that conflicts with network consensus
 
@@ -1277,13 +1277,13 @@ The Sync Op is a specialised Op Relation that emits a consensus accumulator. It 
 
 The Sync Op is not a request-response—it's a **propagating constraint** that accumulates witnesses as it flows through the gossip fabric.
 
-#### Communication Between P-RELs: RECV and SYNC
+#### Communication Between P-RALs: RECV and SYNC
 
-While internal propagation handles consistency within a P-REL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RELs. This is the gossip layer that enables distributed convergence.
+While internal propagation handles consistency within a P-RAL, **RECV** and **SYNC** operations handle **communication** between neighboring P-RALs. This is the gossip layer that enables distributed convergence.
 
 **On OBSERVE:**
 
-When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RELs, seeking consensus.
+When an Observe Pulse arrives and `old != current`, the system returns a **SYNC Op**. This SYNC Op propagates through the network of neighboring P-RALs, seeking consensus.
 
 **On SYNC:**
 
@@ -1317,7 +1317,7 @@ RECV is the communication entrypoint:
 for each node in incoming dictionary:
   T_last = get_last_T(node) from local tracking (stored as [Epoch, [Wall, Skew], Idx] per node)
   filtered_pulses = filter pulses where T_incoming > T_last (comparing [Epoch, Wall + Skew, Idx] structures)
-  merge filtered_pulses into P-REL.meta (append)
+  merge filtered_pulses into P-RAL.meta (append)
   process each pulse, applying inertial frame translation to translate the event into the local frame (adjusting Epoch and Skew with inertia)
 ```
 
@@ -1328,15 +1328,15 @@ DELTA collects changes since the last DELTA execution:
 ```pseudocode
 changes = collect_changes_since_last_delta()
 change_dict = {nodeId: Pulse[]} with your changes
-merge other_node_pulses from P-REL.meta (set in RECV)
-clear P-REL.meta recorded pulses
-update last_delta_time in P-REL.meta
+merge other_node_pulses from P-RAL.meta (set in RECV)
+clear P-RAL.meta recorded pulses
+update last_delta_time in P-RAL.meta
 return RECV with change_dict
 ```
 
 **The Convergence Guarantee:**
 
-This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–ensures that each P-REL reaches quiescence locally while multiple P-RELs converge to consensus globally. The convergence is guaranteed by the mathematical properties of the underlying data structure (join-semilattice [10]), ensuring that even if the network splits, both sides will join when they reconnect. There's no need for a central coordinator–convergence is a natural consequence of the propagator network's structure.
+This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–ensures that each P-RAL reaches quiescence locally while multiple P-RALs converge to consensus globally. The convergence is guaranteed by the mathematical properties of the underlying data structure (join-semilattice [10]), ensuring that even if the network splits, both sides will join when they reconnect. There's no need for a central coordinator–convergence is a natural consequence of the propagator network's structure.
 
 #### Valuation Functions
 
@@ -1493,27 +1493,27 @@ When MaxRounds is reached:
 
 **Type Safety:** Suss is strongly typed. TypeScript types for CAnATL, Value, Pulse, and all other entities ensure correctness at compile time. The type system enforces invariants that would be runtime errors in untyped implementations.
 
-**Serialisation:** Suss can serialise P-REL (containing nodes with ATL values, links array, relations, meta, and asOf) to JSON and deserialise JSON back to P-REL with identical structure. The implementation demonstrates deterministic round-trip—serialising and deserialising a network produces an identical network. Only the P-REL structure is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
+**Serialisation:** Suss can serialise P-RAL (containing nodes with ATL values, links array, relations, meta, and asOf) to JSON and deserialise JSON back to P-RAL with identical structure. The implementation demonstrates deterministic round-trip—serialising and deserialising a network produces an identical network. Only the P-RAL structure is guaranteed serialisable; literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
 
 Serialisation is not bolted on—it is fundamental to how Suss works.
 
 ### 8.3 Provided Networks
 
 **Shadow Object Propagator:** Suss provides a built-in network for shadow object models. This network demonstrates sparse encoding:
-- Uses P-REL nodes with ATL values to represent only essential object state
+- Uses P-RAL nodes with ATL values to represent only essential object state
 - Much of a node's runtime state may be WeakRefs (not serialisable), but literals are opaque
-- Only the P-REL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable
+- Only the P-RAL structure (nodes, links, relations, meta, asOf) is guaranteed serialisable
 - Maintains private state for dirty propagation logic (relations maintain their own temporal context)
 - Provides dirty propagation (manual triggering)
 - Bridges imperative JavaScript code with the propagator model
 
-This illustrates that P-REL is not a direct conversion of entire user objects—it is a sparse encoding of only what needs to be communicated. The tagged literal structure allows efficient representation where tags dispatch to the appropriate interpretation.
+This illustrates that P-RAL is not a direct conversion of entire user objects—it is a sparse encoding of only what needs to be communicated. The tagged literal structure allows efficient representation where tags dispatch to the appropriate interpretation.
 
 **Integration Patterns:** Suss demonstrates how to bridge imperative code and the propagator model:
 - Convert JavaScript objects to CAnATL structures
 - Create Op Relations that emit Pulses from object mutations
 - Use Link Relations to synchronise related objects
-- Serialise complete object graphs as P-REL snapshots
+- Serialise complete object graphs as P-RAL snapshots
 
 The Shadow Object Propagator is both a useful primitive and a reference implementation of integration patterns.
 
@@ -1521,20 +1521,20 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 
 **Performance:** Performance is a function of connectivity, not network size (e.g., O(e) where e is the number of active edges). Networks with high connectivity (many links per node) require more propagation rounds to reach quiescence. Propagation respects causal ordering across rounds (T-ordering), but within a single round, many nodes can update in parallel as long as they're not causally dependent. Highly connected nodes create bottlenecks because they require more rounds to reach quiescence. Sparse networks with low connectivity can be very fast even with many nodes.
 
-**Serialisation:** Serialisation can be optimised by caching serialised representations in metadata. However, metadata has zero guarantees regarding preservation during serialisation cycles—implementations may discard, modify, or ignore metadata. Only the core P-REL structure (nodes, links, relations, meta, asOf) is guaranteed to round-trip. Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
+**Serialisation:** Serialisation can be optimised by caching serialised representations in metadata. However, metadata has zero guarantees regarding preservation during serialisation cycles—implementations may discard, modify, or ignore metadata. Only the core P-RAL structure (nodes, links, relations, meta, asOf) is guaranteed to round-trip. Literals within ATL values are opaque and may contain non-serialisable references (e.g., WeakRefs) in runtime implementations.
 
 **Storage:** CAnATL cells contain only authoritative state—no history, window, or context at the node level. Relations that require temporal context (smoothing, debouncing, moving averages) maintain their own private, non-authoritative state separate from the cells.
 
 **History Preservation:** Cells do not preserve history. If you need complete history:
 - Use persistent immutable data structures (structural sharing preserves history naturally)
 - Maintain a separate pulse log to record all operations
-- Store snapshots at key points (serialise P-REL periodically)
+- Store snapshots at key points (serialise P-RAL periodically)
 
 **Batching:** Batch operations for performance. Instead of computing constraint alignments after every Op, collect multiple Ops and compute alignments once. Change sets enable this naturally.
 
 **Distribution:** Splitting networks across boundaries:
-- Serialise P-REL subgraphs
-- Transmit P-REL subgraphs as values
+- Serialise P-RAL subgraphs
+- Transmit P-RAL subgraphs as values
 - Provide environment-specific resolvers at each boundary
 - Use Pulse exchange for cross-boundary propagation
 
@@ -1561,7 +1561,7 @@ Serialisation adds JSON encoding overhead:
   - JSON string encoding
   - Structure metadata (brackets, commas, keys)
   - String representation of numbers and tags
-- **Time:** Serialisation requires traversing the entire P-REL structure. For a network with N nodes and L links:
+- **Time:** Serialisation requires traversing the entire P-RAL structure. For a network with N nodes and L links:
   - **Time complexity:** O(N + L) — linear in network size
   - **Space complexity:** O(N + L) — linear in network size
   - **Practical performance:** For networks with <1000 nodes, serialisation typically takes <10ms in JavaScript
@@ -1611,11 +1611,11 @@ Suss handles circular dependencies naturally. Networks with cycles propagate unt
 
 #### Serialisation: Pause and Resume
 
-Suss can serialise a network's complete state (P-REL) to JSON at any point. This serialised network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialised to resume exactly where it left off. The network's topology, node states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
+Suss can serialise a network's complete state (P-RAL) to JSON at any point. This serialised network can be transmitted across boundaries (browser to server, saved to disk, sent over network) and then deserialised to resume exactly where it left off. The network's topology, node states, and causal history are preserved. Metadata may or may not be preserved (zero guarantees). This enables true pause-and-resume semantics—a network can be stopped, saved, moved, and continued without loss of core state.
 
 #### Snapshot Files: Bug Reports with Network State
 
-From §1.0's promise: A bug report includes a P-REL snapshot file. In production, when an error occurs, Suss can capture the complete network state at that moment. This snapshot includes all node values (as ATL structures), the propagation graph (links array), and causal history (asOf timestamps). Metadata may be included but is not guaranteed to be preserved. During debugging, this snapshot can be loaded into a development environment, recreating the exact network state from production. Developers can step through propagation, inspect node values, modify relations, and verify fixes—all without needing production logs or trying to reproduce the error state manually.
+From §1.0's promise: A bug report includes a P-RAL snapshot file. In production, when an error occurs, Suss can capture the complete network state at that moment. This snapshot includes all node values (as ATL structures), the propagation graph (links array), and causal history (asOf timestamps). Metadata may be included but is not guaranteed to be preserved. During debugging, this snapshot can be loaded into a development environment, recreating the exact network state from production. Developers can step through propagation, inspect node values, modify relations, and verify fixes—all without needing production logs or trying to reproduce the error state manually.
 
 **Section Total: ~1,100 words**
 
@@ -1653,9 +1653,9 @@ When networks become serialisable values, capabilities that were impossible or r
 
 **Cross-boundary integration:** Networks work across any boundary—browser, server, mobile, embedded—because they're serialisable data.
 
-**Time-travel debugging:** Serialise network state at any point. Step backward and forward through time. Replay from any state. P-REL snapshots are the currency of debugging.
+**Time-travel debugging:** Serialise network state at any point. Step backward and forward through time. Replay from any state. P-RAL snapshots are the currency of debugging.
 
-**Network versioning:** Track changes to network structure over time. Use Git for network history. Diff P-REL snapshots to see what changed.
+**Network versioning:** Track changes to network structure over time. Use Git for network history. Diff P-RAL snapshots to see what changed.
 
 ### 9.3 Future Directions
 
@@ -1665,9 +1665,9 @@ RaCSTS opens research and engineering directions:
 
 **Integration:** Patterns for integrating RaCSTS networks with existing frameworks. React integration. Redux integration. Database integration.
 
-**Formal Verification:** Proving properties of CAnATL structures and network topologies. Verifying that specific networks always reach quiescence. Static analysis of P-REL structures.
+**Formal Verification:** Proving properties of CAnATL structures and network topologies. Verifying that specific networks always reach quiescence. Static analysis of P-RAL structures.
 
-**Ecosystem:** Network libraries for common patterns. Marketplaces for sharing networks. Tooling for inspecting, analysing, and optimising P-REL structures.
+**Ecosystem:** Network libraries for common patterns. Marketplaces for sharing networks. Tooling for inspecting, analysing, and optimising P-RAL structures.
 
 **Performance:** Optimisations for large-scale networks. Parallel propagation where causal independence allows. Incremental serialisation (delta encoding). Persistent immutable data structures for efficient history preservation through structural sharing.
 
@@ -1677,9 +1677,9 @@ RaCSTS opens research and engineering directions:
 
 If RaCSTS makes networks into values, what is the next object we still lack?
 
-**Standard network diff/merge semantics:** How do we diff two P-REL structures meaningfully? How do we merge divergent network states? Current diff tools work on text, not network topology. We need semantic diff/merge for P-REL.
+**Standard network diff/merge semantics:** How do we diff two P-RAL structures meaningfully? How do we merge divergent network states? Current diff tools work on text, not network topology. We need semantic diff/merge for P-RAL.
 
-**Market-grade trust and provenance:** How do we verify that a P-REL snapshot came from a trusted source? How do we track lineage through serialisation and transmission? We need signed P-REL snapshots with verifiable provenance chains.
+**Market-grade trust and provenance:** How do we verify that a P-RAL snapshot came from a trusted source? How do we track lineage through serialisation and transmission? We need signed P-RAL snapshots with verifiable provenance chains.
 
 **Formal verification of relations:** How do we prove that a relation always reaches quiescence? How do we verify that a network of relations has no pathological cycles? We need tools for static analysis of relation correctness.
 
@@ -1699,6 +1699,8 @@ Each solution reveals the next missing object. The journey continues.
 
 **ATL (Associative Tagged Literal):** Recursive associative structure `Dictionary<ATL | TL | TL[]>`. Foundation for representing arbitrary structured data. Can contain nested dictionaries, tagged literals, or arrays of tagged literals.
 
+**Believed Inertial Time Frame (BITF):** Each node's local frame of reference for time. The BITF is defined by `BelievedTime = Wall + Skew`, where Wall is the invariant proper time and Skew is the frame translation. Nodes translate events from remote frames into their own BITF through inertial frame translation, maintaining strong inertia against rapid changes.
+
 **CAnATL (Causal Annotated Associative Tagged Literal):** The fundamental cell type in RaCSTS. Structure: `[T, Tag, Value, Meta?]` containing logical timestamp, semantic tag, current authoritative value, and optional metadata (no preservation guarantees). Cells contain only authoritative state—no history, window, or context at the node level.
 
 **Cell:** A CAnATL structure representing a unit of state in a propagator network. Cells are the "variables" that propagators reconcile.
@@ -1707,13 +1709,13 @@ Each solution reveals the next missing object. The journey continues.
 
 **Epoch:** Logical counter component of T timestamp. Provides primary causal ordering. The "most significant bit" of the timestamp.
 
-**Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearisability even outside individual P-RELs.
+**Epoch-led Hybrid Logical Clock with Skew (EHLC-S) / Gossiped Believed Inertial Time Frame (G-BITF) (T):** Logical timestamp structure `[Epoch, [Wall, Skew], Idx]` implementing a Galilean coordinate system. Epoch is the causal ratchet. Wall is the **invariant proper time**—an immutable physical hardware timestamp that witnesses when the event actually occurred; Wall is never adjusted and serves as the anchor point for frame translation. Skew is the **only mutable component**—a first-class property representing the node's belief about its offset from the network's consensus frame; Skew is adjusted through frame reconciliation, allowing events to be translated into different local frames while preserving the original Wall. Idx disambiguates concurrent events with fractional refinement. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. Consensus emerges implicitly from the network of frame translations rather than through explicit synchronisation.
+
+**Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearisability even outside individual P-RALs.
 
 **Gossiped Believed Inertial Time Frame (G-BITF):** The relativistic coordinate system model implemented by EHLC-S. Each node maintains its own Believed Inertial Time Frame (BITF) where time is represented as `Wall + Skew`. Wall is the invariant proper time (immutable), and Skew is the frame translation (mutable). Consensus emerges implicitly from the network of frame translations rather than through explicit synchronisation.
 
-**Believed Inertial Time Frame (BITF):** Each node's local frame of reference for time. The BITF is defined by `BelievedTime = Wall + Skew`, where Wall is the invariant proper time and Skew is the frame translation. Nodes translate events from remote frames into their own BITF through inertial frame translation, maintaining strong inertia against rapid changes.
-
-**Epoch-led Hybrid Logical Clock with Skew (EHLC-S) / Gossiped Believed Inertial Time Frame (G-BITF) (T):** Logical timestamp structure `[Epoch, [Wall, Skew], Idx]` implementing a Galilean coordinate system. Epoch is the causal ratchet. Wall is the **invariant proper time**—an immutable physical hardware timestamp that witnesses when the event actually occurred; Wall is never adjusted and serves as the anchor point for frame translation. Skew is the **only mutable component**—a first-class property representing the node's belief about its offset from the network's consensus frame; Skew is adjusted through frame reconciliation, allowing events to be translated into different local frames while preserving the original Wall. Idx disambiguates concurrent events with fractional refinement. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. Consensus emerges implicitly from the network of frame translations rather than through explicit synchronisation.
+**Inertial Belief (Frame Translation):** When a node receives a remote pulse with timestamp T_remote, it performs inertial frame translation: (1) checks if the pulse is logically in the past or concurrent (within threshold), (2) if future, advances Epoch: `Epoch_local ← max(Epoch_local, Epoch_remote) + 1`, (3) runs probabilistic `computeSkew` with inertial belief (5% blame acceptance, reduced for nodes with poor history) to translate the event into the local frame by adjusting Skew. The inertial belief creates strong resistance to rapid changes—nodes maintain their frame unless given strong evidence. Wall remains immutable as the invariant proper time. This ensures global linearisability while maintaining each node's Believed Inertial Time Frame with inertia. Consensus emerges implicitly from the network of frame translations.
 
 **Interpretation:** A function that projects a CAnATL to a materialised Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
 
@@ -1729,13 +1731,13 @@ Each solution reveals the next missing object. The journey continues.
 
 **Monotonicity:** Property that timestamps always increase. Operations are only accepted if they advance logical time (T_new > T_current). Ensures forward progress and prevents time-travel.
 
-**Node:** In P-REL, a node structure `{ value, state, meta, asOf }`. P-REL is independent of RaCSTS and uses nodes, not CAnATL cells directly.
+**Node:** In P-RAL, a node structure `{ value, state, meta, asOf }`. P-RAL is independent of RaCSTS and uses nodes, not CAnATL cells directly.
 
 **Observe:** The fundamental operation for introducing external entropy. Structure: `[T, ObserveTag, [Path, Old, New], Meta?]`. Compare-and-swap semantics are intrinsic—accepted only if Cur == Old, otherwise triggers amnesiac event. There is no generic "Set" operation.
 
-**Op Relation:** External operation that introduces entropy. Signature: `op(P-REL, args, meta) -> [delta-P-REL, Pulse[], meta']`. Entry point for external change.
+**Op Relation:** External operation that introduces entropy. Signature: `op(P-RAL, args, meta) -> [delta-P-RAL, Pulse[], meta']`. Entry point for external change.
 
-**P-REL (Parallel Relational Layer):** The serialisable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
+**P-RAL (Parametric Relational Adjacency List):** The serialisable blueprint of a network containing nodes, links, relations, meta, and T. Independent of RaCSTS. Contains topology, state, and causal markers but no executable code.
 
 **Pulse:** The atomic unit of propagation. Structure: `[T, Tag, Args, Meta?]`. The fundamental unit that flows through the network.
 
@@ -1745,6 +1747,8 @@ Each solution reveals the next missing object. The journey continues.
 
 **Scale Invariance:** Property that the same primitives work at all scales—single cells, subnetworks, whole networks, meta-networks. No special handling required for nested networks.
 
+**Skew (Frame Translation):** The only mutable component of the `[Wall, Skew]` pair in T. Skew represents the node's current belief about its offset from the network's consensus frame. Skew is adjusted through inertial frame translation, allowing events to be translated into different local frames while preserving the original Wall as the invariant witness. The adjustment maintains strong inertia—only a small percentage of blame is accepted (5% default), creating resistance to rapid changes. The "Believed Time" is `Wall + Skew`.
+
 **Standard Higher-Order Relations:** Six core toolkit primitives: `mark` (directional truth propagation), `linear` (bidirectional numeric constraints), `map` (functional transformation with conflict resolution), `constrain` (bidirectional constraint solver), `reduce` (N→1 aggregation), `join` (N→M relational knitting). These are standard primitives, not optional extensions.
 
 **State Transition System (STS) [15]:** The theoretical grounding for CAnATL. CAnATL is a reified trace of an STS, where each Pulse is a transition and T provides causal ordering.
@@ -1753,17 +1757,13 @@ Each solution reveals the next missing object. The journey continues.
 
 **Sync Op:** Specialised Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
 
-**Inertial Belief (Frame Translation):** When a node receives a remote pulse with timestamp T_remote, it performs inertial frame translation: (1) checks if the pulse is logically in the past or concurrent (within threshold), (2) if future, advances Epoch: `Epoch_local ← max(Epoch_local, Epoch_remote) + 1`, (3) runs probabilistic `computeSkew` with inertial belief (5% blame acceptance, reduced for nodes with poor history) to translate the event into the local frame by adjusting Skew. The inertial belief creates strong resistance to rapid changes—nodes maintain their frame unless given strong evidence. Wall remains immutable as the invariant proper time. This ensures global linearisability while maintaining each node's Believed Inertial Time Frame with inertia. Consensus emerges implicitly from the network of frame translations.
-
 **T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serialisability.
 
 **Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serialising individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
 
-**Wall (Invariant Proper Time):** The immutable physical hardware timestamp component of T. Wall witnesses when the event actually occurred and is never adjusted—it serves as the anchor point for frame translation in the G-BITF model. Wall allows the originator to recognise its own events while peers translate that event into their local frame via Skew adjustment.
-
-**Skew (Frame Translation):** The only mutable component of the `[Wall, Skew]` pair in T. Skew represents the node's current belief about its offset from the network's consensus frame. Skew is adjusted through inertial frame translation, allowing events to be translated into different local frames while preserving the original Wall as the invariant witness. The adjustment maintains strong inertia—only a small percentage of blame is accepted (5% default), creating resistance to rapid changes. The "Believed Time" is `Wall + Skew`.
-
 **Value:** Union type `AnATL | AnTL`. The type of "a value" in the system—any serialisable data with optional semantic tags and annotations.
+
+**Wall (Invariant Proper Time):** The immutable physical hardware timestamp component of T. Wall witnesses when the event actually occurred and is never adjusted—it serves as the anchor point for frame translation in the G-BITF model. Wall allows the originator to recognise its own events while peers translate that event into their local frame via Skew adjustment.
 
 ### Appendix B: Complete Type Definitions
 
@@ -1802,7 +1802,7 @@ type Pulse = [T, Tag, Args, Meta?] // T: timestamp, Tag: operation identifier, A
 type ObservePulse = [T, ObserveTag, [Path, Old, New], Meta?] // Fundamental operation: compare-and-swap semantics intrinsic
 type ChangeSet = Pulse[]
 
-// P-REL Structure (independent of RaCSTS)
+// P-RAL Structure (independent of RaCSTS)
 interface PREL {
   nodes: { [id: string]: Node }
   relations: { [id: string]: Relation }
@@ -1811,7 +1811,7 @@ interface PREL {
   asOf: T  // Current logical timestamp
 }
 
-// Node structure in P-REL
+// Node structure in P-RAL
 interface Node {
   value: ATL  // ATL, not Value - tagged literals dispatch on tag for interpretation
   asOf: T
@@ -1819,7 +1819,7 @@ interface Node {
   meta: ATL
 }
 
-// Relation in P-REL (implementation-dependent)
+// Relation in P-RAL (implementation-dependent)
 // Relations are opaque - their structure depends on the implementation
 // For serialisation, relations are recreated from metadata or relation definitions
 type Relation = unknown  // Implementation-dependent structure
@@ -1895,12 +1895,12 @@ Since `linear` is a higher-order relation, it must be instantiated with paramete
 const tempRelation = linearRelation(32, 1.8)  // a=32, b=9/5=1.8
 ```
 
-**The P-REL Structure:**
+**The P-RAL Structure:**
 
-P-REL is independent of RaCSTS and contains nodes, links, relations, meta, and T:
+P-RAL is independent of RaCSTS and contains nodes, links, relations, meta, and T:
 
 ```typescript
-// P-REL structure
+// P-RAL structure
 const temperatureNetwork: PREL = {
   nodes: {
     "celsius": {
@@ -2074,7 +2074,7 @@ When progress evidence shows consistent forward movement and the network approac
 MaxRounds circuit breaker activates. No quiescence reached despite bounded propagation.
 
 **Response:**
-System halts with current state. Logs execution trace showing propagation history. Returns P-REL snapshot representing partial progress.
+System halts with current state. Logs execution trace showing propagation history. Returns P-RAL snapshot representing partial progress.
 
 **Recovery:**
 External intervention may be needed:
