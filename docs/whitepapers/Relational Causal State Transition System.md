@@ -380,7 +380,7 @@ To bridge the formal type hierarchy with operational semantics, we define the en
 
 **From Pipes to Filters:** Initially, the design assumed that pulses would propagate directly to nodes—links were just "pipes" that carried pulses from one node to another. But when Link Relations were defined, the system departed from this automatic propagation model. A Link Relation is a pure function that **determines if and how** a state change should propagate across an edge. It's responsible for deciding **Visibility** and **Frequency**—not just passing pulses through. Without defined Link Relations, every node would talk to every other node infinitely. By including Link Relations in the P-RAL index, the **Value** itself contains the "Congestion Control" and "Interest Management" of the network. You aren't just serialising data; you are serialising a **Policy of Movement**. This shift from "pipes" to "filters/transformers" is what makes the network serialisable as a value—the propagation policy is part of the data structure itself, not a runtime behaviour.
 
-**Change Set:** A collection of operations applied to cells. Used by toolkit primitives for adding operations, collapsing redundant operations, materialising values, and computing constraint alignments. Change Sets batch operations for efficient application.
+**Pulse:** A `[T, Tag, Args, Meta?]` structure constructed with `pulse(t, op, args, meta?)` or using the helper method `op.pulse(t, ...args)`. Operations are created with `operation(opId, implementation)` and added to networks during construction. Pulses are constructed using operations that were added to the network. For example, `recv` operations take a pulse list as args: `pulse(t_msg, recv, [pulse(t_obs, observe, [old, new])])` or using helpers: `recv.pulse(t_msg, [observe.pulse(t_obs, [old, new])])`. The `meta` parameter is optional. Pulses can be collapsed with `collapse()` to remove redundancy while preserving causal integrity.
 
 **Interpretation:** A function that projects a CAnATL to a materialised Value. Signature: `interpretation(CAnATL) -> Value`. The interpretation defines how a cell's CAnATL structure becomes a concrete value. Each cell is an "Interpretation VM"—it processes operations through its interpretation to produce its current value.
 
@@ -663,7 +663,7 @@ Pack and unpack are inverses for the core P-RAL structure. A serialised network,
 #### Scale Invariance
 
 **Operational Definition:**
-The same core operations (adding operations to change sets, collapsing redundant operations, materialising values through interpretation, computing constraint alignments) operate identically at:
+The same core operations (applying operations to networks, collapsing redundant pulses, materialising values through interpretation, computing constraint alignments) operate identically at:
 - **Subnetwork level:** A single CAnATL cell or small network
 - **Whole-network level:** A network containing many CAnATL cells
 - **Meta-network level:** A network whose Values are themselves networks
@@ -707,29 +707,27 @@ RaCSTS achieves serialisability through strict separation of concerns:
 
 RaCSTS is not a framework—it is a toolkit. Four core operations provide complete control over network state:
 
-#### Monotonic Injector
+#### 1. Defining Network by Connecting Nodes via Relations
 
-Adds an operation to a change set. The operation is a Pulse: `[T, Tag, Args, Meta?]`. This operation maintains T-ordering (logical time) and semi-lattice properties (operations can be applied in any order as long as T-ordering is respected).
+Operations are created with `operation(opId, implementation)`. Networks are constructed using `network(t0, config, ops?)` where `ops` defaults to `[recv, delta, sync]`. Operations are added to the network during construction. Networks are then built using `node()`, `relation()`, and `connect()`. The `connect()` function handles everything—it takes a network, source node, relation, and target node, and returns a new network with the connection established. This is the fundamental way to build network topology.
+
+#### 2. Applying Operations from the Outside World
+
+Applies a pulse to a network using `apply(prel, op, config)`. Operations are created with `operation(opId, implementation)` and added to networks during construction (defaults to `[recv, delta, sync]`). Pulses are then constructed with `pulse(t, op, args, meta?)` or using the helper method `op.pulse(t, ...args)`, where `meta` is optional. For example, `recv` operations take a pulse list as args: `pulse(t_msg, recv, [pulse(t_obs, observe, [old, new])])` or using helpers: `recv.pulse(t_msg, [observe.pulse(t_obs, [old, new])])`. The `apply()` function is strictly for operations from the outside world—not for arbitrary pulses. This operation maintains T-ordering (logical time) and semi-lattice properties (operations can be applied in any order as long as T-ordering is respected).
 
 This is the fundamental way to introduce change into the system.
 
-#### Log Aggregator
+#### 3. Collapsing/Aggregating Pulses
 
-Collapses a change set while preserving necessary context. This operation removes redundant operations by performing identity folding—if a value changes 1→2→3, it can be collapsed to 1→3. If a value changes 1→2→1 (circular mutation), it can be collapsed to a no-op.
+Collapses redundant pulses using `collapse(pulses)` while preserving necessary context. This operation removes redundant operations by performing identity folding—if a value changes 1→2→3, it can be collapsed to 1→3. If a value changes 1→2→1 (circular mutation), it can be collapsed to a no-op.
 
-This is the memory management operation of the system, reducing the size of change sets while maintaining causal integrity.
+This is the memory management operation of the system, reducing the number of pulses while maintaining causal integrity.
 
-#### Execution Engine
+#### 4. Running Propagation Rounds
 
-Projects a CAnATL through an interpretation function to materialise a Value. The interpretation is the "microcode" of the cell—it defines how the CAnATL structure becomes a concrete value.
+Propagates changes through the network using `propagate(network, config)`. This operation runs propagation rounds until quiescence is reached, tracking changed nodes by timestamp. Each round detects changed nodes, identifies matching links, resolves relations, executes relations, and conditionally updates target nodes.
 
-This is the fundamental way to observe the state of the system.
-
-#### Constraint Solver
-
-Computes operations to align two CAnATL cells according to a relation. Given the current change sets and values of two cells, this operation invokes the relation function to compute new operations that bring the cells into alignment.
-
-This is the fundamental way to maintain relationships in the network.
+This is the fundamental way to maintain relationships in the network and reach a stable state.
 
 These four operations are sufficient to build any propagator network. Higher-level abstractions are built from these operations, not baked into the system.
 
@@ -1251,7 +1249,7 @@ The system achieves consensus without a leader through three foundational proper
 
 1. **Inertial belief ensures global linearisability without a central master clock**: When nodes receive remote timestamps, they translate events from remote frames into their local frame through inertial belief, adjusting both Epoch (for causal ordering) and Skew (for frame translation) while maintaining strong resistance to rapid changes. No central coordinator is needed—each node independently maintains its own Believed Inertial Time Frame with inertia, while translating events from other frames. Consensus emerges implicitly from these translations.
 
-2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
+2. **Semilattice join operations guarantee convergence without coordination**: The network state model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
 
 3. **Any node can initiate consensus for any path**: There is no designated leader node that coordinates consensus. Every node has equal authority to emit a Sync Op for any state path. If multiple nodes initiate competing Syncs, they merge naturally through the accumulator dictionary or resolve through Epoch-based ordering.
 
@@ -1351,7 +1349,7 @@ The final value used is determined by a reduction of the dictionary:
 The Sync Op leverages the propagator network's fundamental property: **local consistency, global convergence**. This is leader-free consensus because convergence is guaranteed by the mathematical properties of the underlying data structure, not by coordinator logic.
 
 **Semilattice Foundation:**
-- The change set model is a join-semilattice [10] (foundation of CRDTs [7,8])
+- The network state model is a join-semilattice [10] (foundation of CRDTs [7,8])
 - When two nodes receive different Sync dictionaries, they join: `NewState = CurrentState ∨ RemoteState`
 - The join operation is:
   - **Commutative**: `A ∨ B = B ∨ A` (order doesn't matter)
@@ -1477,7 +1475,7 @@ When MaxRounds is reached:
 
 **Etymology and Meaning:** The name "Suss" honors Gerald J. Sussman, whose foundational work on propagator networks with Alexey Radul [1] provided the theoretical foundation for this system. But it also doubles as an evocative verb in modern English—to "suss out" means to investigate, to understand, or to find the truth of a situation. This perfectly encapsulates what the library does: it **susses** the state of an arbitrary graph and provides the "Just Enough Knowledge" to act on it. The library susses out the state, susses out the relationships, susses out what needs to propagate.
 
-**Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (adding operations to change sets, collapsing redundant operations, materialising values through interpretation, computing constraint alignments) are the complete toolkit. Everything else is built from these primitives.
+**Toolkit Philosophy:** Suss provides primitives that compose, not a framework that prescribes. The four core operations (defining network by connecting nodes via relations, applying operations from the outside world, collapsing/aggregating pulses, running propagation rounds) are the complete toolkit. Everything else is built from these primitives.
 
 **Purpose:** Suss exists to prove RaCSTS works and to provide practical tooling for building serialisable propagator networks in TypeScript. It is opinionated about correctness, not about how you use it.
 
@@ -1485,11 +1483,11 @@ When MaxRounds is reached:
 
 **Correctness and Clarity:** Suss prioritises correctness and clarity over performance. The implementation demonstrates that RaCSTS is implementable without compromises to the specification.
 
-**The Four Core Operations:** Suss implements the four core operations exactly as specified in the RaCSTS specification. All operate on CAnATL structures and change sets:
-- Adding Pulses to change sets while maintaining T-ordering
-- Collapsing redundant operations in change sets while preserving causal integrity
-- Projecting CAnATL through interpretation functions to materialise values
-- Computing reconciliation operations for pairs of cells according to relations
+**The Four Core Operations:** Suss implements the four core operations exactly as specified in the RaCSTS specification:
+- Defining network by connecting nodes via relations using `network()`, `node()`, `relation()`, and `connect()`
+- Applying operations from the outside world using `apply()` with pulses constructed by `pulse(t, op, args, meta?)` where operations are created with `operation(opId, implementation)` and added to networks during construction, and `meta` is optional
+- Collapsing/aggregating pulses using `collapse()` to remove redundancy while preserving causal integrity
+- Running propagation rounds using `propagate()` to maintain relationships and reach quiescence
 
 **Type Safety:** Suss is strongly typed. TypeScript types for CAnATL, Value, Pulse, and all other entities ensure correctness at compile time. The type system enforces invariants that would be runtime errors in untyped implementations.
 
@@ -1530,7 +1528,7 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 - Maintain a separate pulse log to record all operations
 - Store snapshots at key points (serialise P-RAL periodically)
 
-**Batching:** Batch operations for performance. Instead of computing constraint alignments after every Op, collect multiple Ops and compute alignments once. Change sets enable this naturally.
+**Batching:** Batch operations for performance. Instead of computing constraint alignments after every Op, collect multiple pulses and compute alignments once. The `collapse()` function enables this naturally.
 
 **Distribution:** Splitting networks across boundaries:
 - Serialise P-RAL subgraphs
@@ -1630,7 +1628,7 @@ RaCSTS provides a formal specification for serialisable propagator networks. By 
 The specification is complete:
 - Type hierarchy from Literal to CAnATL defines properly basic types
 - Model entities bridge formal definitions to operational semantics
-- Core operations (adding operations, collapsing redundant operations, materialising values, computing constraint alignments) provide complete control
+- Core operations (defining network by connecting nodes via relations, applying operations from the outside world, collapsing/aggregating pulses, running propagation rounds) provide complete control
 - Properties and guarantees (monotonicity, serialisable consistency, scale invariance, meta-circularity) are testable
 
 Suss, the TypeScript reference implementation, demonstrates that RaCSTS is practical. The four core operations, strong typing, and serialisation capabilities prove that the specification can be implemented without compromises.
@@ -1880,8 +1878,8 @@ F = 32 + (9/5) × C
 ```
 
 Where:
-- `a = 32` (the intercept)
-- `b = 9/5` (the slope)
+- `a = 32` (the bias)
+- `b = 9/5` (the gradient)
 - `x = C` (source value)
 - `y = F` (target value)
 
@@ -1900,38 +1898,24 @@ const tempRelation = linearRelation(32, 1.8)  // a=32, b=9/5=1.8
 P-RAL is independent of RaCSTS and contains nodes, links, relations, meta, and T:
 
 ```typescript
-// P-RAL structure
-const temperatureNetwork: PREL = {
-  nodes: {
-    "celsius": {
-      value: { "temperature": [["celsius", 25]] },  // ATL structure
-      asOf: T0,
-      lineage: "observed",
-      meta: {}
-    },
-    "fahrenheit": {
-      value: { "temperature": [["fahrenheit", 77]] },  // ATL: tagged literal dispatches on "temperature"
-      asOf: T0,
-      lineage: "derived",
-      meta: {}
-    }
-  },
-  relations: {
-    "temp": linearRelation(32, 1.8)  // Higher-order relation instantiated with parameters
-  },
-  links: [  // Array of links, not object
-    {
-      srcSelector: "node:celsius",
-      tgtSelector: "node:fahrenheit",
-      relationId: "temp",  // References relation in relations map
-      args: [],  // No args - parameters are in the relation definition
-      meta: {},
-      label: "celsius-to-fahrenheit"
-    }
-  ],
-  meta: {},
-  asOf: T0  // Current logical timestamp
-}
+// Create operations (if custom ones needed beyond default [recv, delta, sync])
+const observeOp = operation('observe', observeImplementation)
+
+// Network construction - config goes in metadata, ops defaults to [recv, delta, sync]
+const temperatureNetwork = network(T0, {})
+
+// Factory functions for entities
+const celsiusNode = node("celsius", { "temperature": [["celsius", 25]] }, T0, "observed")
+const fahrenheitNode = node("fahrenheit", { "temperature": [["fahrenheit", 77]] }, T0, "derived")
+const [tempRelationId, tempRelation] = relation("temp", linearRelation(32, 1.8))
+
+// Single connect function - handles everything (bidirectional connection)
+const connectedNetwork = connect(
+  temperatureNetwork,
+  celsiusNode,
+  tempRelation,
+  fahrenheitNode
+)
 ```
 
 **How It Works:**
@@ -1960,14 +1944,23 @@ The bidirectional nature is automatic—the `linear` relation handles both direc
 To update the temperature, emit Observe Pulses:
 
 ```typescript
-// Update Celsius to 30°C
-const observeCelsius: ObservePulse = [
-  T1,
-  "observe",
-  ["celsius", 25, 30],  // [Path, Old, New]
-  {}
-]
+// Construct pulses using operations from the network
+// Assume observe and recv are imported as symbols
+// Two ways to construct pulses:
 
+// Method 1: Direct construction
+const observePulse1 = pulse(t_obs, observe, ["celsius", 25, 30])  // [Path, Old, New]
+const recvPulse1 = pulse(t_msg, recv, [pulse(t_obs, observe, ["celsius", 25, 30])])
+
+// Method 2: Helper method (preferred)
+const observePulse2 = observe.pulse(t_obs, ["celsius", 25, 30])  // [Path, Old, New]
+const recvPulse2 = recv.pulse(t_msg, [observe.pulse(t_obs, ["celsius", 25, 30])])
+
+// Apply pulse to network
+const result = apply(connectedNetwork, observePulse2)
+
+// Propagate - returns new network, tracks changed nodes by timestamp
+const updatedNetwork = propagate(connectedNetwork)
 // The network automatically computes F = 32 + (9/5) × 30 = 86°F
 // The Fahrenheit cell updates via the linear relation
 ```
