@@ -62,8 +62,6 @@ This is the promise RaCSTS delivers.
 
 **Section Total: ~330 words**
 
----
-
 ## 2. The Problem: What's Hard Today
 
 ### 2.1 Current Tools
@@ -107,8 +105,6 @@ This is not a tooling problem that better debuggers will solve. This is a model 
 **Falsifiable claim:** If a reactive system cannot serialise its complete state (topology, values, and causal history) into a format that deterministically reproduces that state upon deserialisation, then time-travel debugging, network versioning, and compositional reuse of that system require external, framework-specific infrastructure. RaCSTS proposes that this infrastructure becomes unnecessary when networks are properly basic serialisable values.
 
 **Section Total: ~500 words**
-
----
 
 ## 3. Propagator Networks: The First Structural Shift
 
@@ -167,8 +163,6 @@ This distinction is critical: Propagators give you a better runtime, but they do
 The need is clear: We need networks as values, not just networks as processes.
 
 **Section Total: ~550 words**
-
----
 
 ## 4. The Missing Object: Networks as Serialisable Values
 
@@ -241,8 +235,6 @@ This is what RaCSTS provides: a specification for networks as serialisable value
 
 **Section Total: ~620 words**
 
----
-
 ## 5. Consequences of the Missing Object
 
 ### 5.1 Network Composition
@@ -278,8 +270,6 @@ This is what RaCSTS provides: a specification for networks as serialisable value
 **If networks are serialisable values, then** network optimisation becomes a compiler problem. Analyze the network structure, apply optimisation passes, emit an optimised network—all at build time.
 
 **Section Total: ~350 words**
-
----
 
 ## 6. The Theoretical Foundation: RaCSTS Specification
 
@@ -326,7 +316,13 @@ Each layer wraps the previous, adding semantic structure (tags, annotations, cau
 
 **Tag:** A semantic label for a value, used implicitly for type discrimination and protocol dispatch.
 
-**T:** A logical timestamp for causal ordering. Structure: `[Epoch, SyncedWall, Idx]` where Epoch is a logical counter, SyncedWall is NTP-synchronised wall time [9], and Idx disambiguates concurrent events. The Idx component uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RELs. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components.
+**T:** A logical timestamp for causal ordering. Structure: `[Epoch, [Wall, Skew], Idx]` where:
+- **Epoch** is a logical counter that serves as the "Causal Ratchet," ensuring linear order when nodes are too far apart to reconcile
+- **Wall** is the immutable physical hardware timestamp (the "Local Witness")
+- **Skew** is a first-class, mutable property representing the node's belief about its deviation from the network mean time
+- **Idx** disambiguates concurrent events and uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RELs
+
+This **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)** structure [5] extends Lamport's logical clocks [2] with physical time components and probabilistic consensus mechanisms. The nested structure `[Wall, Skew]` separates physical hardware time from network-agreed reality, enabling distributed time consensus without requiring external synchronisation.
 
 #### Core Types
 
@@ -600,7 +596,7 @@ A node's value has **state** (also referred to as lineage in conceptual discussi
 | `value` | Value | Current value (opaque in RaCSTS, ATL in Suss) |
 | `state` | `'observed' \| 'consensus' \| 'stale' \| 'derived'` | Provenance and authority level |
 | `meta` | ATL | Metadata |
-| `asOf` | [Epoch, SyncedWall, Idx] | Timestamp of last update |
+| `asOf` | [Epoch, [Wall, Skew], Idx] | Timestamp of last update |
 
 **Authority Rules:**
 
@@ -870,7 +866,7 @@ The Relation interface is the contract for propagation logic.
 #### Serialisation Format
 
 Pack and unpack operations must:
-- **Serialise CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, SyncedWall, Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
+- **Serialise CAnATL:** `[T, Tag, Value, Meta?]` where T is `[Epoch, [Wall, Skew], Idx]` (with fractional Idx), Tag is a string, Value is the current authoritative state, and Meta is optional metadata (no preservation guarantees)
 - **Serialise Values:** Values are `AnATL | AnTL`, which serialise as nested JavaScript structures
 - **Preserve Structure:** Recursive ATL structure must round-trip perfectly
 - **Deterministic:** Core P-REL structure (nodes, links, relations, meta, asOf) must round-trip identically. Metadata has zero guarantees and may differ.
@@ -975,84 +971,170 @@ This organic evolution from log-based to P-REL based wasn't planned, but it was 
 
 ### 7.6 Serialisability and Linearity in Distributed Systems
 
-While RaCSTS is designed to make networks serialisable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes how the Hybrid Epoch Clock enables both local serialisability and distributed linearity.
+While RaCSTS is designed to make networks serialisable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes the **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)**, a distinct formalism that enables both local serialisability and distributed linearity through probabilistic time consensus.
 
-#### The Hybrid Epoch Clock
+#### The Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)
 
-The T structure is always `[Epoch, SyncedWall, Idx]`. This hybrid logical clock structure [5] extends Lamport's logical clocks [2] with physical time components. The system achieves internal linearisability [6] through fractional refinement of the Idx component.
+The T structure is always `[Epoch, [Wall, Skew], Idx]`. This **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)** structure [5] extends Lamport's logical clocks [2] with physical time components and probabilistic consensus mechanisms. The system achieves internal linearisability [6] through fractional refinement of the Idx component.
 
 **Component Roles:**
-- **Epoch:** Logical counter that provides the primary causal ordering. This is the "most significant bit" of the timestamp
-- **SyncedWall:** NTP-synchronised wall clock time, providing physical time reference
+- **Epoch:** The "Causal Ratchet." A logical counter that ensures linear order when nodes are too far apart to reconcile. This is the "most significant bit" of the timestamp, providing the primary causal ordering
+- **Wall:** The immutable physical hardware timestamp (the "Local Witness"). This is the raw wall clock time at the moment of event creation
+- **Skew:** A first-class, mutable property representing the node's current belief of its offset from the network's "Mean Time." This is not an optimisation—it is a fundamental causal property that enables distributed time consensus
 - **Idx:** Disambiguates concurrent events at the same wall time. Uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to encode internal propagation rounds
 
-This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
+The nested structure `[Wall, Skew]` separates physical hardware time from network-agreed reality. The "Believed Time" for any node is `Wall + Skew`, which represents where the node believes it exists in the network's consensus timeline. This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
 
-#### The Sway Rule: Ensuring Linearisability
+#### The Probabilistic Sway Rule: Ensuring Linearisability
 
-The Sway Rule ensures global linearisability [6] across distributed nodes. When a node receives a remote timestamp T_remote, it must update its local timestamp T_local to maintain strict monotonicity:
+The Probabilistic Sway Rule ensures global linearisability [6] across distributed nodes through a "Refining Step" that reconciles clock drift rather than simply jumping the Epoch. When a node receives a remote pulse with timestamp T_remote, it performs the following reconciliation:
 
-```
-Sway Rule:
-  T_local = [Epoch_local, Wall_local, Idx_local]
-  T_remote = [Epoch_remote, Wall_remote, Idx_remote]
-  
-  if T_local < T_remote:
-    Epoch_local ← Epoch_remote + 1
-  else:
-    Epoch_local ← max(Epoch_local, Epoch_remote) + 1
-```
+**The Refining Step:**
 
-This "Sway Rule" ensures:
+1. **Causal Check:** If the remote pulse is logically in the past or concurrent (within a threshold based on `Wall + Skew`), it is processed normally without modification.
+
+2. **Epoch Ratchet:** If the pulse is logically in the future (violating monotonicity when comparing `[Epoch, Wall + Skew, Idx]`), the local node must "buy" causal space by advancing:
+   ```
+   Epoch_local ← max(Epoch_local, Epoch_remote) + 1
+   ```
+
+3. **Skew Reconciliation:** The node runs a `computeSkew` function using a probabilistic approach. It:
+   - Calculates the "Believed Time" for both nodes: `BelievedTime_local = Wall_local + Skew_local` and `BelievedTime_remote = Wall_remote + Skew_remote`
+   - Computes the delta and weighs the evidence of the incoming pulse against its current model of "True Time"
+   - Updates its local Skew to adjust its belief about its offset from the network mean
+   - Updates the remote pulse's Skew to reflect the node's belief about the remote node's drift
+
+This probabilistic approach treats incoming timestamps as evidence rather than commands, enabling the system to filter out Byzantine or "loud" clocks while maintaining causal correctness.
+
+**Properties:**
 - **Strict monotonicity:** Timestamps always advance, never regress
-- **Total ordering:** Any two timestamps can be compared unambiguously
+- **Total ordering:** Any two timestamps can be compared unambiguously using `[Epoch, Wall + Skew, Idx]`
 - **Clock-drift resilience:** System remains causal even if physical clocks are hours apart
+- **Self-stabilisation:** The Skew adjustment creates a negative feedback loop that pulls nodes toward a stable mean time
 
-The Epoch carries causality forward, making physical clock synchronisation an optimisation rather than a requirement.
+The Epoch carries causality forward during periods of high divergence, while the Skew handles micro-jitter and enables convergence to a stable mean. Physical clock synchronisation (like NTP) remains an optional optimisation that reduces the magnitude of Skews and Epoch heights, but is not required for correctness.
 
-#### Clock Synchronisation via Gossip
+#### Examples: PCE-HLC in Practice
 
-While the Sway Rule ensures correctness, clock gossip provides optimisation. The system implements clock gossip for NTP-style synchronisation [9]. Each transmission bundle contains a synchronisation timestamp (T_Sync), a dictionary of clocks (Clocks), and an array of pulses (Pulse[]):
+**Example 1: Basic Refining Step**
 
-Where:
-- `T_Sync` is the sender's current `[Epoch, SyncedWall, Idx]` (with Idx containing fractional round if mid-propagation)
-- `Clocks` is `Dictionary<NodeId, WallClock>` containing observed wall clock timestamps from other nodes (used for NTP-style optimisation, not for causal ordering)
-- `Pulse[]` is the array of state transitions being transmitted, each with its own `[Epoch, SyncedWall, Idx]` timestamp
+Node A has local timestamp `T_A = [5, [1000, 0], 10]` (Epoch=5, Wall=1000, Skew=0, Idx=10). Node B sends a pulse with `T_B = [6, [1100, -50], 5]`.
 
-**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, SyncedWall, Idx]` timestamp. The Sway Rule ensures that when a P-REL receives a remote timestamp, it updates its local Epoch to maintain global linearisability. The Clocks dictionary is used only for optimising physical clock synchronisation (SyncedWall convergence), not for causal ordering—the Epoch component handles causality.
+1. **Causal Check:** Compare `[Epoch, Wall + Skew, Idx]`:
+   - A: `[5, 1000 + 0, 10] = [5, 1000, 10]`
+   - B: `[6, 1100 + (-50), 5] = [6, 1050, 5]`
+   - B is in the future (Epoch 6 > 5), triggering the Refining Step
 
-**Clock Op as Pulse:**
-The Clocks Op is itself a Pulse in the relations index. It:
-- Responds to incoming external Clocks
-- Computes `Max(Time)` across all observed node clocks
-- Emits updated Clocks as a new Pulse
-- Provides the data for background NTP-style clock refinement
+2. **Epoch Ratchet:** `Epoch_A ← max(5, 6) + 1 = 7`
 
-**Gossip Convergence:**
-Over time, clocks converge despite local drift:
-1. Each node maintains observed timestamps from other nodes in its Clocks dictionary
-2. Transmission bundles carry clock witnesses (subset of recently updated clocks)
-3. Receivers merge observed clocks using Max
-4. The SyncedWall component gradually aligns across the network
+3. **Skew Reconciliation:** `computeSkew` calculates:
+   - BelievedTime_A = 1000 + 0 = 1000
+   - BelievedTime_B = 1100 + (-50) = 1050
+   - Delta = 50ms ahead
+   - Updates: `Skew_A ← -25` (probabilistic adjustment toward mean)
+   - Updates remote pulse: `Skew_B ← -25` (Node A's belief about Node B)
 
-This is an **optional optimisation**—the Epoch-based Sway Rule ensures correctness regardless of clock synchronisation quality.
+Result: `T_A = [7, [1000, -25], 10]`, and the pulse is processed with updated Skew.
 
-#### Initialisation: Default Epoch Value
+**Example 2: Time-Shifting and Feedback Loop**
 
-When initialising a new P-REL, the system sets the initial Epoch value as: **`Epoch = UnixTime + skew`**, where `skew` is any prior known clock skew preserved in metadata or provided by a clock sync node.
+Node A (drifting fast) sends pulse with `T_A = [5, [1000, 0], 10]` to Node B. Node B's local time is `T_B = [5, [950, 0], 15]` (Node B's clock is 50ms behind).
+
+1. **Node B receives pulse:**
+   - Refining Step detects A is 50ms ahead
+   - Updates `Skew_B ← +25` (Node B learns it's slow)
+   - Updates remote pulse: `Skew_A ← -25` (Node B's belief that A is fast)
+
+2. **Node B broadcasts (time-shifting):**
+   - Re-broadcasts A's pulse with `Skew_A = -25` (not the original 0)
+   - Node C receives the time-shifted pulse
+
+3. **Feedback to Node A:**
+   - Node A eventually receives its own pulse back with `Skew_A = -25`
+   - Node A updates its local Skew toward -25
+   - Over multiple round-trips, Node A's Skew converges to the network mean
+
+This creates a negative feedback loop: drifting nodes are pulled back toward consensus.
+
+**Example 3: Causal Ratcheting During Initial Sync**
+
+Two nodes boot simultaneously with no prior knowledge:
+- Node A: `T_A = [1000, [1000, 0], 0]` (Epoch = UnixTime)
+- Node B: `T_B = [1005, [1005, 0], 0]` (slightly later boot)
+
+**Round 1:**
+- Node A sends pulse to Node B
+- Node B's Refining Step: `Epoch_B ← max(1005, 1000) + 1 = 1006`
+- Node B's Skew adjusts: `Skew_B ← -2.5` (probabilistic toward mean)
+- Result: `T_B = [1006, [1005, -2.5], 0]`
+
+**Round 2:**
+- Node B sends pulse back to Node A
+- Node A's Refining Step: `Epoch_A ← max(1000, 1006) + 1 = 1007`
+- Node A's Skew adjusts: `Skew_A ← +2.5`
+- Result: `T_A = [1007, [1000, +2.5], 0]`
+
+**Round 3:**
+- BelievedTime_A = 1000 + 2.5 = 1002.5
+- BelievedTime_B = 1005 + (-2.5) = 1002.5
+- Values align within threshold—Epoch stops rising
+- System reaches **Stable Mean Time** at Epoch 1007
+
+The Epoch climbed from 1000/1005 to 1007 during sync, then stabilised once Skews aligned.
+
+#### Distributed Error Correction: Time-Shifting and Causal Relays
+
+The PCE-HLC implements distributed error correction through time-shifting during the gossip phase. The system operates on a cycle of **Ingest → Reconcile → Process → Quiesce → Broadcast**.
+
+**Time-Shifting Mechanism:**
+
+When a node reaches quiescence and prepares an outbound gossip message, it performs distributed error correction:
+
+1. **Time-Shifting Remote Pulses:** Before re-broadcasting remote pulses, a node "shifts" them by replacing their original Skews with its own updated belief of that node's drift. This allows the network to "rehabilitate" drifting nodes before their data propagates further.
+
+2. **The Feedback Loop:** If Node A is drifting, it will eventually receive its own pulses back from Node B, but with a **modified Skew**. Node A sees this "Network Truth" and drifts its local Skew toward that value, creating a negative feedback loop that stabilises the system.
+
+3. **The Sum of Novel Timeshifted Pulses:** The outbound message becomes a **Sum of Novel Timeshifted Pulses**—a causal snapshot that includes both novel local pulses and novel remote pulses that have been time-shifted to reflect the node's current consensus belief.
+
+**Transmission Bundle Structure:**
+
+Each transmission bundle contains:
+- `T_Sync`: The sender's current `[Epoch, [Wall, Skew], Idx]` (with Idx containing fractional round if mid-propagation)
+- `Pulse[]`: The array of state transitions being transmitted, each with its own `[Epoch, [Wall, Skew], Idx]` timestamp where Skews have been updated to reflect the sender's consensus belief
+
+**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, [Wall, Skew], Idx]` timestamp. The Probabilistic Sway Rule ensures that when a P-REL receives a remote timestamp, it reconciles both the Epoch (for causal ordering) and the Skew (for time consensus). The Skew component is first-class—it is not just an optimisation, but a fundamental mechanism for achieving distributed time consensus.
+
+**Causal Ratcheting:**
+
+During initial peer discovery or after a network partition, Epochs will climb on every round-trip. This "syncing tax" ensures a linear order for sequential events while allowing for partial concurrent ordering across the network. Once the `Wall + Skew` values align within a shared "concurrency window," the Epoch stops rising and the system reaches a **Stable Mean Time**.
+
+**Byzantine Resistance:**
+
+By using a probabilistic `computeSkew`, the system treats outlier clocks as low-confidence data. Instead of forcing a global Epoch jump, the system applies a local negative skew to the outlier, neutralising its impact on the global timeline while maintaining causal correctness.
+
+This mechanism makes clock synchronisation a **first-class causal property** rather than an optional optimisation. The system works correctly even if clocks never fully converge—the Epoch ensures linearisability regardless—but the Skew mechanism actively pulls nodes toward consensus, reducing the frequency of Epoch jumps and enabling stable operation.
+
+#### Initialisation: Default Epoch and Skew Values
+
+When initialising a new P-REL, the system sets the initial timestamp T as: **`[Epoch, [Wall, Skew], Idx]`** where:
+
+- **Epoch:** `Epoch = UnixTime + prior_skew`, where `prior_skew` is any prior known clock skew preserved in metadata or provided by a clock sync node. If no prior skew is available, `prior_skew = 0` and the epoch starts at UnixTime.
+- **Wall:** The current physical wall clock time at initialisation
+- **Skew:** Initially set to `0`, representing the node's initial belief that its clock is accurate
+- **Idx:** Initially set to `0`
 
 **Initialisation Logic:**
 - If a node has previously computed clock skew (preserved in metadata from a previous session or received from a clock sync node), it uses that skew to adjust the starting epoch
-- If no prior skew is available, `skew = 0` and the epoch starts at UnixTime
+- The Skew starts at 0 and will be adjusted through the probabilistic consensus mechanism as the node participates in the network
 - This allows nodes that have been part of the network before to start closer to the network's current causal generation
 
 **Benefits:**
 - Provides global coarse sync without a central server
 - Even if two nodes have never met, their Epochs will be roughly in the same "galaxy"
 - Nodes with prior network participation start closer to the current causal generation, reducing the initial Epoch jump required when they reconnect
-- The Sway Rule handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will sway it forward to the network's current Epoch
+- The Probabilistic Sway Rule handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will trigger Epoch advancement and Skew reconciliation
 
-This decision stabilises the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising—it uses gossip to find a fixed point for time, space (window size), and state (consensus), while maintaining local consistency at every step.
+This decision stabilises the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising—it uses gossip to find a fixed point for time (through Skew consensus), space (window size), and state (consensus), while maintaining local consistency at every step. The Skew mechanism actively pulls nodes toward a stable mean time, reducing the frequency of Epoch jumps once the network reaches consensus.
 
 #### Internal Linearisability: Fractional Idx Refinement
 
@@ -1064,23 +1146,24 @@ The Idx component uses fractional refinement to enable strict ordering of intern
 - **Bounded rounds:** Round ∈ [0, MaxRounds), preventing unbounded fractional growth
 - **Serialisation:** The computed fractional Idx value is part of T, serialised as a single number
 
-**Example:** When an external Observe Pulse arrives, T might be [5, 1704067200, 42.00] (BaseIdx=42, Round=0). As links propagate, the Round increments: 42.01, 42.02, etc. When quiescence is reached at Round=5, T is [5, 1704067200, 42.05]. The next external Observe Pulse increments BaseIdx to 43 and resets Round to 0, yielding [5, 1704067200, 43.00].
+**Example:** When an external Observe Pulse arrives, T might be [5, [1704067200, 0], 42.00] (BaseIdx=42, Round=0, Skew=0). As links propagate, the Round increments: 42.01, 42.02, etc. When quiescence is reached at Round=5, T is [5, [1704067200, 0], 42.05]. The next external Observe Pulse increments BaseIdx to 43 and resets Round to 0, yielding [5, [1704067200, 0], 43.00].
 
-The fractional Idx allows strict ordering of the propagation wavefront without requiring wall clock advancement for each internal step. Critically, this makes timestamps from different P-RELs directly comparable—if P-REL A is at T=[5, 1704067200, 42.03] and P-REL B is at T=[5, 1704067200, 42.07], we can unambiguously order them even though they're separate networks.
+The fractional Idx allows strict ordering of the propagation wavefront without requiring wall clock advancement for each internal step. Critically, this makes timestamps from different P-RELs directly comparable—if P-REL A is at T=[5, [1704067200, 0], 42.03] and P-REL B is at T=[5, [1704067200, 0], 42.07], we can unambiguously order them even though they're separate networks. When comparing timestamps, the system uses `[Epoch, Wall + Skew, Idx]` to determine ordering.
 
 #### Implications for Serialisability
 
 This architecture ensures that P-REL serialisation preserves causal order across distributed boundaries:
 
 **When packing a P-REL:**
-- All T timestamps are serialised as `[Epoch, SyncedWall, Idx]` where Idx contains the fractional refinement
-- The Clocks dictionary (if present) is serialised as metadata
+- All T timestamps are serialised as `[Epoch, [Wall, Skew], Idx]` where Idx contains the fractional refinement
+- Both Wall and Skew are preserved exactly, maintaining the node's belief about its clock offset
 - Causal relationships are preserved in the Epoch ordering
 - Fractional Idx values are preserved exactly, maintaining internal propagation ordering
 
 **When unpacking a P-REL:**
-- Timestamps are restored exactly, including fractional Idx values
-- The receiving node applies the Sway Rule to its local clock based on the unpacked Epochs
+- Timestamps are restored exactly, including fractional Idx values and the [Wall, Skew] pair
+- The receiving node applies the Refining Step (Probabilistic Sway) to reconcile the unpacked timestamps with its local clock
+- The Skew values from the unpacked P-REL are treated as evidence in the probabilistic consensus mechanism
 - Propagation can resume from the exact state where it was serialised
 - The fractional Idx allows the receiving node to correctly order unpacked operations relative to its own ongoing propagation
 
@@ -1088,8 +1171,9 @@ This architecture ensures that P-REL serialisation preserves causal order across
 - A P-REL serialised on Node A can be deserialised on Node B
 - Node B's local clock may be completely different
 - The Epoch-based ordering ensures Node B correctly orders all operations relative to its local state
+- The Skew reconciliation mechanism allows Node B to adjust its belief about time while maintaining causal correctness
 - The fractional Idx ensures operations from the unpacked P-REL interleave correctly with Node B's local propagation
-- Clock gossip (if enabled) allows Node B to gradually align its SyncedWall with the network
+- The probabilistic consensus mechanism actively pulls Node B's Skew toward the network mean, reducing future Epoch jumps
 
 This makes RaCSTS networks truly portable across distributed boundaries—serialisation and deserialisation are inverses that preserve all causal structure. The fractional Idx refinement is what enables linearisability **outside individual P-RELs**, allowing multiple P-RELs to coordinate or merge while maintaining strict causal ordering.
 
@@ -1101,7 +1185,7 @@ RaCSTS provides a natural mechanism for distributed consensus without request-re
 
 The system achieves consensus without a leader through three foundational properties:
 
-1. **The Sway Rule ensures global linearisability without a central master clock**: When nodes receive remote timestamps, the Epoch-based Sway Rule advances their local clock to maintain total ordering. No central coordinator is needed—each node independently maintains causal correctness through local logic.
+1. **The Probabilistic Sway (Refining Step) ensures global linearisability without a central master clock**: When nodes receive remote timestamps, the Refining Step reconciles both Epoch (for causal ordering) and Skew (for time consensus) through probabilistic evidence. No central coordinator is needed—each node independently maintains causal correctness through local logic while actively participating in distributed time consensus.
 
 2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
 
@@ -1141,34 +1225,50 @@ When an Observe Pulse arrives and `old != current`, the system returns a **SYNC 
 
 When a SYNC pulse arrives, the system checks the quorum:
 
-- If the count of keys equals the target quorum:
-  - If the value is `stale`: If quorum is met for a value, set it as `consensus`; else increase the required count and return the incoming SYNC with the new count
-  - Else: Do nothing (already decided)
-- Else:
-  - If you haven't voted: Add your vote to the original SYNC and return it
-  - Else: Return the original SYNC unchanged
+```pseudocode
+if count(keys) == target_quorum:
+  if value == 'stale':
+    if quorum_met_for_value:
+      set value as 'consensus'
+    else:
+      increase required_count
+      return incoming SYNC with new count
+  else:
+    // do nothing (already decided)
+else:
+  if not voted_yet:
+    add vote to original SYNC
+    return modified SYNC
+  else:
+    return original SYNC unchanged
+```
 
 This creates a "rolling snowball" effect where the SYNC accumulator grows as it propagates through the network until consensus is reached.
 
 **On RECV:**
 
-RECV is the communication entrypoint. For each node in the incoming dictionary:
+RECV is the communication entrypoint:
 
-1. Get the last T for that node from the local tracking (stored as `[Epoch, SyncedWall, Idx]` per node)
-2. Filter pulses for novelty: `T_incoming > T_last` (where T_incoming and T_last are both `[Epoch, SyncedWall, Idx]` structures)
-3. Keep a copy of the filtered pulses in the P-REL meta (merge with append)
-4. Process each pulse, applying the Sway Rule to update local T if needed
+```pseudocode
+for each node in incoming dictionary:
+  T_last = get_last_T(node) from local tracking (stored as [Epoch, [Wall, Skew], Idx] per node)
+  filtered_pulses = filter pulses where T_incoming > T_last (comparing [Epoch, Wall + Skew, Idx] structures)
+  merge filtered_pulses into P-REL.meta (append)
+  process each pulse, applying Refining Step (Probabilistic Sway) to reconcile Epoch and Skew
+```
 
 **DELTA:**
 
 DELTA collects changes since the last DELTA execution:
 
-1. Collect the changes since last DELTA
-2. Construct a `nodeId: Pulse[]` dictionary with your changes
-3. Merge the other node's pulses from the meta (set in RECV)
-4. Clear the meta recorded pulses
-5. Update the last delta time in the meta
-6. Return a RECV with the change-dictionary
+```pseudocode
+changes = collect_changes_since_last_delta()
+change_dict = {nodeId: Pulse[]} with your changes
+merge other_node_pulses from P-REL.meta (set in RECV)
+clear P-REL.meta recorded pulses
+update last_delta_time in P-REL.meta
+return RECV with change_dict
+```
 
 **The Convergence Guarantee:**
 
@@ -1252,7 +1352,7 @@ This mechanism treats consensus not as heavyweight coordination, but as a natura
 **The Leader-Free Property:**
 
 Consensus in RaCSTS is leader-free because:
-- **No election needed**: The Sway Rule and semilattice properties eliminate the need for leader election protocols
+- **No election needed**: The Probabilistic Sway (Refining Step) and semilattice properties eliminate the need for leader election protocols
 - **No single point of failure**: Any node can initiate consensus; no designated coordinator
 - **Partition tolerance**: Network splits don't break consensus—they pause it. Reconnection triggers automatic merge through join operations
 - **Zero-Knowledge verification**: Each node independently verifies causal correctness through local Epoch comparison and OLD value matching (transitions to `stale` on mismatch)
@@ -1381,7 +1481,7 @@ The Shadow Object Propagator is both a useful primitive and a reference implemen
 The CAnATL wrapper adds structure overhead compared to plain in-memory state objects:
 
 - **Memory:** Each CAnATL cell requires `[T, Tag, Value, Meta?]` structure. For a simple value (e.g., number 42), this adds:
-  - T: 3 numbers (Epoch, SyncedWall, Idx) ≈ 24 bytes
+  - T: 4 numbers (Epoch, Wall, Skew, Idx) ≈ 32 bytes
   - Tag: string (variable, typically 10-50 bytes)
   - Value: the actual data (minimal for primitives)
   - Meta: optional ATL (variable, often empty)
@@ -1545,7 +1645,7 @@ Each solution reveals the next missing object. The journey continues.
 
 **Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearisability even outside individual P-RELs.
 
-**Hybrid Epoch Clock (T):** Logical timestamp structure `[Epoch, SyncedWall, Idx]` where Epoch is logical counter, SyncedWall is NTP-synchronised wall time, and Idx disambiguates concurrent events with fractional refinement.
+**Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC) (T):** Logical timestamp structure `[Epoch, [Wall, Skew], Idx]` where Epoch is the causal ratchet, Wall is the immutable physical hardware timestamp, Skew is a first-class mutable property representing the node's belief about its offset from network mean time, and Idx disambiguates concurrent events with fractional refinement. The "Believed Time" is `Wall + Skew`, representing where the node believes it exists in the network's consensus timeline.
 
 **Interpretation:** A function that projects a CAnATL to a materialised Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
 
@@ -1585,7 +1685,7 @@ Each solution reveals the next missing object. The journey continues.
 
 **Sync Op:** Specialised Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
 
-**Sway Rule:** When a node receives a remote timestamp T_remote, it updates its local timestamp T_local to maintain strict monotonicity: `T_local = max(T_local, T_remote)`. Ensures global linearisability without a central master clock.
+**Probabilistic Sway (Refining Step):** When a node receives a remote pulse with timestamp T_remote, it performs a three-step reconciliation: (1) checks if the pulse is logically in the past or concurrent (within threshold), (2) if future, advances Epoch: `Epoch_local ← max(Epoch_local, Epoch_remote) + 1`, (3) runs probabilistic `computeSkew` to reconcile Skew values, treating incoming timestamps as evidence. This ensures global linearisability while actively participating in distributed time consensus through Skew adjustment.
 
 **T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serialisability.
 
@@ -1601,7 +1701,7 @@ type Literal = unknown
 type Tag = string
 type Path = string
 type ObserveTag = string
-type T = [Epoch: number, SyncedWall: number, Idx: number] // Idx uses fractional refinement: Idx = BaseIdx + Round / MaxRounds
+type T = [Epoch: number, [Wall: number, Skew: number], Idx: number] // Idx uses fractional refinement: Idx = BaseIdx + Round / MaxRounds. BelievedTime = Wall + Skew
 
 // Core Types
 type TL = [Tag, Literal]
@@ -1809,13 +1909,13 @@ The entire network serialises to JSON:
   "nodes": {
     "celsius": {
       "value": { "temperature": [["celsius", 30]] },
-      "asOf": [0, 1704067200, 1.0],
+      "asOf": [0, [1704067200, 0], 1.0],
       "lineage": "observed",
       "meta": {}
     },
     "fahrenheit": {
       "value": { "temperature": [["fahrenheit", 86]] },
-      "asOf": [0, 1704067200, 1.05],
+      "asOf": [0, [1704067200, 0], 1.05],
       "lineage": "derived",
       "meta": {}
     }
@@ -1834,7 +1934,7 @@ The entire network serialises to JSON:
     }
   ],
   "meta": {},
-  "asOf": [0, 1704067200, 1.05]
+  "asOf": [0, [1704067200, 0], 1.05]
 }
 ```
 

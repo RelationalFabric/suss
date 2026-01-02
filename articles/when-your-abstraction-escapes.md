@@ -42,9 +42,7 @@ The original ADR 0006 proposed a solution: hash objects using `objectId` (a stab
 
 The intent was simple: make the hashing structure-independent. Instead of hardcoding property access, use Canon's `PAssoc` protocol. The hash would work whether the data was a POJO, a Map, or an Immutable structure.
 
-It seemed like a straightforward refactor. But as I tried to write it, I hit a wall. The ADR assumed you could enumerate properties, compute per-key hashes, and compose them. But what if the data came from a legacy SQL system as key-value rows? What if it was an Immutable.js structure? What if someone mutated the object outside our control? The structure-aware approach required knowing the container type upfront, which broke the entire premise of Canon's universal API.
-
-The specific frustration was this: I couldn't write a clean ADR that described fast hashing without also describing how to handle every possible container type. The abstraction was leaking.
+It seemed like a straightforward refactor. But as I tried to write it, I hit a wall. The ADR assumed you could enumerate properties, compute per-key hashes, and compose them. But what did "the same" actually mean? Should `{ foo: 1 }` hash to the same value as `[{ key: 'foo', value: 1 }]`? They represent the same semantic relationship, but they're structurally different. The structure-aware approach required knowing not just the container type, but what made two different structures semantically equivalent. The abstraction was leaking.
 
 ### The First Realisation: Semantic Equivalence
 
@@ -284,34 +282,50 @@ When an Observe Pulse arrives and `old != current`, the system returns a **SYNC 
 
 When a SYNC pulse arrives, the system checks the quorum:
 
-- If the count of keys equals the target quorum:
-  - If the value is `stale`: If quorum is met for a value, set it as `consensus`; else increase the required count and return the incoming SYNC with the new count
-  - Else: Do nothing (already decided)
-- Else:
-  - If you haven't voted: Add your vote to the original SYNC and return it
-  - Else: Return the original SYNC unchanged
+```pseudocode
+if count(keys) == target_quorum:
+  if value == 'stale':
+    if quorum_met_for_value:
+      set value as 'consensus'
+    else:
+      increase required_count
+      return incoming SYNC with new count
+  else:
+    // do nothing (already decided)
+else:
+  if not voted_yet:
+    add vote to original SYNC
+    return modified SYNC
+  else:
+    return original SYNC unchanged
+```
 
 This creates a "rolling snowball" effect where the SYNC accumulator grows as it propagates through the network until consensus is reached.
 
 **On RECV:**
 
-RECV is the communication entrypoint. For each node in the incoming dictionary:
+RECV is the communication entrypoint:
 
-1. Get the last T for that node from the vector clock
-2. Filter pulses for novelty: `T_incoming > T_last`
-3. Keep a copy of the filtered pulses in the P-REL meta (merge with append)
-4. Process each pulse
+```pseudocode
+for each node in incoming dictionary:
+  T_last = get_last_T(node) from vector_clock
+  filtered_pulses = filter pulses where T_incoming > T_last
+  merge filtered_pulses into P-REL.meta (append)
+  process each pulse
+```
 
 **DELTA:**
 
 DELTA collects changes since the last DELTA execution:
 
-1. Collect the changes since last DELTA
-2. Construct a `nodeId: Pulse[]` dictionary with your changes
-3. Merge the other node's pulses from the meta (set in RECV)
-4. Clear the meta recorded pulses
-5. Update the last delta time in the meta
-6. Return a RECV with the change-dictionary
+```pseudocode
+changes = collect_changes_since_last_delta()
+change_dict = {nodeId: Pulse[]} with your changes
+merge other_node_pulses from P-REL.meta (set in RECV)
+clear P-REL.meta recorded pulses
+update last_delta_time in P-REL.meta
+return RECV with change_dict
+```
 
 This separation–internal propagation for local consistency, RECV/SYNC for distributed communication–is what makes RaCSTS both locally deterministic and globally convergent. The iterative propagation rounds ensure each P-REL reaches quiescence, while RECV/SYNC ensures multiple P-RELs converge to consensus.
 
@@ -383,7 +397,7 @@ But the gold was there. We discovered that propagator networks were the missing 
 
 > In traditional code, `a = b + c` is a transient execution. In a propagator network, that `+` is a living, serialisable relation.
 
-We had spent decades modelling nouns (objects, entities) while leaving the verbs (relations, constraints) to be hard-coded functions. **The breakthrough was making the relations into data–into values you could serialise, version, and reason about.**
+Making relations into data, values you could serialise, version, and reason about–is much of what Relational Fabric is all about. Here, we arrived at it again by turning the verbs (relations, constraints) into first-class values.
 
 > The lesson: Sometimes you have to follow the abstraction where it leads.
 
@@ -426,3 +440,77 @@ Sometimes there's gold in them thar hills.
 By turning the relations into data, the abstraction no longer 'escapes' into the ether of side-effects–it stays exactly where we can see it, sync it, and trust it.
 
 That's why I'm building Suss–to catch the abstraction before it runs away.
+
+---
+
+## Postscript: The Clock Flaw and the Probabilistic Consensus Solution
+
+After publishing this article, I discovered a critical flaw in the clock design I'd described. The "Epoch-Leading" model with the Sway Rule had a fundamental problem: it was checking only the Epoch component while ignoring the Wall Clock component, and it was advancing the Epoch without accounting for clock drift.
+
+### The Flaw
+
+The original Sway Rule was defined as:
+
+> If `T_remote > T_local`, then `T_local[0] = max(T_local[0], T_remote[0]) + 1`
+
+This had two critical issues:
+
+1. **The comparison was wrong**: By checking only the Epoch (the first component), the system ignored cases where the remote Wall Clock was significantly ahead even if Epochs were the same. A node with a lower Epoch but a far-future Wall Clock could cause incorrect ordering.
+
+2. **Epoch advancement alone was insufficient**: Advancing the Epoch without reconciling clock drift meant the `SyncedWall` component became meaningless. The system would degrade into a pure logical counter, losing the "Hybrid" benefit of having physical time relevance.
+
+The system was acting as a passive observer to clock drift, with no feedback loop to pull drifting nodes back into alignment.
+
+### The Solution: Probabilistic Consensus Epoch-led HLC (PCE-HLC)
+
+The solution transforms clock skew from a background optimisation into a fundamental causal mechanism. Instead of `[Epoch, SyncedWall, Idx]`, the clock structure becomes:
+
+```
+[Epoch, [Wall, Skew], Idx]
+```
+
+Where:
+- **Epoch**: The "Causal Ratchet" that ensures linear order when nodes are too far apart to reconcile
+- **Wall**: The immutable physical hardware timestamp (the "Local Witness")
+- **Skew**: A first-class, mutable property representing the node's belief about its deviation from the network mean
+- **Idx**: The monotonic disambiguator for concurrent events
+
+### The Refining Step
+
+When a pulse arrives, the node doesn't just react—it reconciles:
+
+1. **Logic Check**: If the pulse is logically in the past, it's accepted. If it's in the future (violating monotonicity), it triggers the safety ratchet.
+
+2. **The Probabilistic Sway**: Instead of a simple max function, `computeSkew` treats incoming timestamps as probabilistic evidence. It calculates the "Believed Time" (`Wall + Skew`) for both nodes and computes the delta.
+
+3. **Local Correction**: The node updates its own Skew and the remote pulse's Skew so that all subsequent local events are logically concurrent with or after the remote pulse.
+
+### Distributed Error Correction
+
+The system operates on a cycle of **Ingest → Quiesce → Broadcast**:
+
+1. **Time-Shifting**: Before re-broadcasting remote pulses, a node "shifts" them by updating the Skew property to reflect the newest consensus.
+
+2. **The Feedback Loop**: If Node A is drifting, it will eventually receive its own pulses back from Node B, but with a **modified Skew**. Node A sees this "Network Truth" and drifts its local Skew toward that value.
+
+This creates a negative feedback loop that stabilises the system. By allowing the Skew to be "mutated" and gossiped back to the original author, the network acts as a distributed NTP server, pulling nodes toward a stable mean time.
+
+### Causal Ratcheting
+
+In this model, the Epoch behaves as a governor for stability:
+
+- **During Sync**: If nodes are wildly misaligned, the Epoch rises on every round-trip. This "syncing tax" buys time for the Skew logic to pull the nodes together.
+
+- **At Quiescence**: Once the `Wall + Skew` values align within a shared "concurrency window," the Epoch stops rising. The system reaches a **Stable Mean Time**.
+
+- **Partial Ordering**: The system prioritises sequential linearity (A caused B) while allowing healthy concurrent "fuzziness" between independent nodes.
+
+### The Result
+
+The PCE-HLC creates a self-stabilising "physics" for the network. It uses the **Epoch** to survive chaos (partitions, discovery) and the **Probabilistic Skew** to achieve laminar flow (steady-state operation). It treats time as a distributed agreement that the network "hunts" for through gossip.
+
+The Epoch only jumps when the entire network experiences a shift that the Skew buffers can no longer absorb. Until consensus is met, nodes skewed to the past will cause the epoch to rise on every round-trip until they are synced. The epoch guarantees a linear order for sequential events, not all events—giving us the partial concurrent ordering across the network that we want.
+
+This discovery came through another conversation with Gemini, where I challenged the original design and we worked through the flaw systematically. The full discussion is chronicled in [the flaw analysis conversation](https://github.com/bahulneel/medium/blob/main/chats/Gemini-Hybrid%20Logical%20Clock%20Flaw%20Analysis.md).
+
+The lesson remains the same: sometimes you have to follow the abstraction where it leads, even when it reveals flaws in your previous thinking. The gold isn't just in the initial discovery—it's also in recognising when your abstraction needs refinement.
