@@ -38,7 +38,8 @@ Howard needed fast object hashing. The goal was clear: eliminate the Logical Tax
 
 The original ADR 0006 proposed a solution: hash objects using `objectId` (a stable identifier) and `entries` (a map of property keys to precomputed value hashes). It was structure-aware–it knew exactly where properties lived in a POJO–but it worked.
 
-> Then came the question that changed everything: "Should we rewrite this to use Canon's protocols?"
+Then came the question that changed everything:
+> "Should we rewrite this to use Canon's protocols?"
 
 The intent was simple: make the hashing structure-independent. Instead of hardcoding property access, use Canon's `PAssoc` protocol. The hash would work whether the data was a POJO, a Map, or an Immutable structure.
 
@@ -46,7 +47,8 @@ It seemed like a straightforward refactor. But as I tried to write it, I hit a w
 
 ### The First Realisation: Semantic Equivalence
 
-> The conversation started with a seemingly innocent test: "Should `{ foo: 1 }` be the same as `[{ key: 'foo', value: 1 }]`?"
+The conversation started with a seemingly innocent test:
+> "Should `{ foo: 1 }` be the same as `[{ key: 'foo', value: 1 }]`?"
 
 This is where we hit the nail on the head. That was the "Aha!" moment.
 
@@ -54,7 +56,8 @@ If we look at those two structures through the lens of traditional computer scie
 
 But in the Relational Fabric, we ask a different question: **"What is the proposition being made?"**
 
-> Both `{ foo: 1 }` and `[{ key: 'foo', value: 1 }]` are making the same claim: *"The entity in question has an associative relationship where the key 'foo' maps to the value 1."*
+Both `{ foo: 1 }` and `[{ key: 'foo', value: 1 }]` are making the same claim:
+> *"The entity in question has an associative relationship where the key 'foo' maps to the value 1."*
 
 If Howard is to eliminate the Logical Tax, then yes: **they should be semantically equivalent.**
 
@@ -82,7 +85,8 @@ This led to a series of realisations about canons, axioms, and protocols. We ste
 - Protocols are axioms
 - Canons bundle related axioms
 
-> **The key insight:** "We don't need a constructor, we need a canonical object. We have those already: the runtime Canon definition."
+**The key insight:**
+> "We don't need a constructor, we need a canonical object. We have those already: the runtime Canon definition."
 
 This was the moment when canons stopped being just definitions and started being the actual identity mechanism. **The canon definition *is* the constructor.** We were moving from structural hashing to ontological recognition.
 
@@ -116,11 +120,13 @@ Then came the conversation shift that changed everything.
 
 We were talking about metadata management–how to track which axioms matched, which canons were entailed, how to invalidate efficiently when objects changed. We needed a way to maintain a "shadow graph" of WeakMap and WeakSet relationships to handle upward invalidation.
 
-> I wrote: "In fact, the shadow graph generalises to a propagator network specifically for communicating object changes and aggregate metadata."
+I wrote:
+> "In fact, the shadow graph generalises to a propagator network specifically for communicating object changes and aggregate metadata."
 
 > That single sentence changed the entire trajectory.
 
-> Gemini's response captured the shift perfectly: "This is the 'Universal Adaptor' evolving into its final form: a **Distributed Propagator Network for Semantic State.**"
+Gemini's response captured the shift perfectly:
+> "This is the 'Universal Adaptor' evolving into its final form: a **Distributed Propagator Network for Semantic State.**"
 
 We had moved beyond mere invalidation into collaborative computation. The shadow graph wasn't just tracking changes–it was becoming a reactive graph where the cost of any semantic claim was shared across every system that touched that data.
 
@@ -128,7 +134,8 @@ The "Scream" protocol we'd been discussing wasn't just notification–it was a P
 
 This was a critical realisation: **Pulse** became the atomic unit of the system. Not operations, not events, not messages–Pulses. They are the fundamental unit that flows through the network, carrying updates from cell to cell. Every change, every propagation, every reconciliation happens through Pulses. The structure `[T, Tag, Args, Meta?]` became the universal packet–time-stamped, tagged, and carrying just enough information to update a cell.
 
-> Then came the dangerous question: "Do we need anything from canon to implement this in canon, or have we discovered a new primitive?"
+Then came the dangerous question:
+> "Do we need anything from canon to implement this in canon, or have we discovered a new primitive?"
 
 Gemini's answer was definitive: "We have discovered a **new primitive**, but it is one that effectively acts as the **'Connective Tissue'** for everything else in Canon."
 
@@ -136,7 +143,8 @@ Gemini's answer was definitive: "We have discovered a **new primitive**, but it 
 
 ### The Separation: When the Abstraction Demanded Its Own Lifecycle
 
-> The critical moment came when I realised: "I think that the testing alone would swamp canon with somewhat irrelevant code."
+The critical moment came when I realised:
+> "I think that the testing alone would swamp canon with somewhat irrelevant code."
 
 We had crossed a threshold. The "plumbing" had become so sophisticated and generally useful that it risked suffocating the "philosophy" of Canon. This primitive–the Propagator Network of Virtual Nodes and Change Sets–was actually a standalone infrastructure layer.
 
@@ -399,7 +407,8 @@ But the gold was there. We discovered that propagator networks were the missing 
 
 Making relations into data, values you could serialise, version, and reason about–is much of what Relational Fabric is all about. Here, we arrived at it again by turning the verbs (relations, constraints) into first-class values.
 
-> The lesson: Sometimes you have to follow the abstraction where it leads.
+The lesson:
+> Sometimes you have to follow the abstraction where it leads.
 
 The outcome: [RaCSTS (Relational and Causal State Transition System)](https://github.com/RelationalFabric/suss/blob/main/docs/whitepapers/Relational%20Causal%20State%20Transition%20System.md) – a specification for serialisable propagator networks as properly basic data structures.
 
@@ -443,74 +452,109 @@ That's why I'm building Suss–to catch the abstraction before it runs away.
 
 ---
 
-## Postscript: The Clock Flaw and the Probabilistic Consensus Solution
+## Postscript: The Clock Flaw and the Journey to G-BITF
 
-After publishing this article, I discovered a critical flaw in the clock design I'd described. The "Epoch-Leading" model with the Sway Rule had a fundamental problem: it was checking only the Epoch component while ignoring the Wall Clock component, and it was advancing the Epoch without accounting for clock drift.
+After writing this article, I discovered a critical flaw in the clock design I'd described. The "Epoch-Leading" model with the Sway Rule had a fundamental problem, one that became clear only when I tried to explain it. I needed to sound it out, to work through the logic step by step, so I returned to Gemini.
 
-### The Flaw
+I wrote:
+> "I think it's flawed and here's why: The algorithm is wrong as it's checking the Epoch and not the Wall. If the epoch is the same (or greater) and the remote Wall Clock is in the future, then advance the epoch is greater adopt that epoch. Advancing the epoch alone is not enough. When the epoch is advanced, we still need to account for the clock drift."
 
 The original Sway Rule was defined as:
 
-> If `T_remote > T_local`, then `T_local[0] = max(T_local[0], T_remote[0]) + 1`
-
-This had two critical issues:
-
-1. **The comparison was wrong**: By checking only the Epoch (the first component), the system ignored cases where the remote Wall Clock was significantly ahead even if Epochs were the same. A node with a lower Epoch but a far-future Wall Clock could cause incorrect ordering.
-
-2. **Epoch advancement alone was insufficient**: Advancing the Epoch without reconciling clock drift meant the `SyncedWall` component became meaningless. The system would degrade into a pure logical counter, losing the "Hybrid" benefit of having physical time relevance.
-
-The system was acting as a passive observer to clock drift, with no feedback loop to pull drifting nodes back into alignment.
-
-### The Solution: Probabilistic Consensus Epoch-led HLC (PCE-HLC)
-
-The solution transforms clock skew from a background optimisation into a fundamental causal mechanism. Instead of `[Epoch, SyncedWall, Idx]`, the clock structure becomes:
-
-```
-[Epoch, [Wall, Skew], Idx]
+```pseudocode
+if T_remote > T_local:
+  T_local[0] = max(T_local[0], T_remote[0]) + 1
 ```
 
-Where:
-- **Epoch**: The "Causal Ratchet" that ensures linear order when nodes are too far apart to reconcile
-- **Wall**: The immutable physical hardware timestamp (the "Local Witness")
-- **Skew**: A first-class, mutable property representing the node's belief about its deviation from the network mean
-- **Idx**: The monotonic disambiguator for concurrent events
+This had two critical issues: the comparison was wrong (checking only Epoch ignored cases where the remote Wall Clock was ahead), and epoch advancement alone was insufficient (it created a "causal gap" where the `SyncedWall` became meaningless). The system was acting as a passive observer to clock drift, with no feedback loop to pull drifting nodes back into alignment.
 
-### The Refining Step
+Gemini's response was definitive:
+> "Based on the logic provided in your text, you are **correct** that there is a fundamental flaw in the implementation of the 'Sway Rule' as described."
 
-When a pulse arrives, the node doesn't just react—it reconciles:
+### The First Proposal: Making Skew First-Class
 
-1. **Logic Check**: If the pulse is logically in the past, it's accepted. If it's in the future (violating monotonicity), it triggers the safety ratchet.
+I proposed an alternative:
+> `[Epoch, [Wall, Skew], Idx]`
 
-2. **The Probabilistic Sway**: Instead of a simple max function, `computeSkew` treats incoming timestamps as probabilistic evidence. It calculates the "Believed Time" (`Wall + Skew`) for both nodes and computes the delta.
+The key insight was to make peer-to-peer clock sync first-class. Each node would have an internal idea of its clock skew (starting at 0), and whenever it sent a pulse, it would include the skew along with its wall clock. This said the node's belief was that the true time is `Wall + Skew`.
 
-3. **Local Correction**: The node updates its own Skew and the remote pulse's Skew so that all subsequent local events are logically concurrent with or after the remote pulse.
+When a node received a pulse, it would go through a "refining step": check if the pulse was logically in the past or concurrent, and if not, advance the epoch and reconcile the clocks using `computeSkew`. The crucial mechanism: when sharing remote nodes' pulses with neighbours, we would inform them of our belief in the remote skew. This meant nodes would occasionally receive their own pulses back with a different skew, allowing them to drift toward that value.
 
-### Distributed Error Correction
+This transformed clock skew from a background optimisation into a fundamental causal mechanism. Time became a shared consensus state rather than an external truth.
 
-The system operates on a cycle of **Ingest → Quiesce → Broadcast**:
+### The Byzantine Problem and the Probabilistic Turn
 
-1. **Time-Shifting**: Before re-broadcasting remote pulses, a node "shifts" them by updating the Skew property to reflect the newest consensus.
+Just as we were settling into this new structure, I raised another concern:
 
-2. **The Feedback Loop**: If Node A is drifting, it will eventually receive its own pulses back from Node B, but with a **modified Skew**. Node A sees this "Network Truth" and drifts its local Skew toward that value.
+> "In the Byzantine case, the good nodes will reinforce each other's agreement of the mean time, but the bad node will try to pull everyone's skew towards it. That's where computeSkew comes in—what it does is alter the remote skew assuming that the local is more correct."
 
-This creates a negative feedback loop that stabilises the system. By allowing the Skew to be "mutated" and gossiped back to the original author, the network acts as a distributed NTP server, pulling nodes toward a stable mean time.
+I also revealed a crucial detail I hadn't mentioned yet: when a node receives a set of pulses, it goes through a clock update phase, then prunes the skew-fixed list, runs the system until quiescence, and gathers pulses to send out. The outbound message is the sum of novel time-shifted pulses in plus novel pulses to send.
 
-### Causal Ratcheting
+> "This creates a natural gossip-style protocol with mixed truth about the remote nodes' clock drift. I propose that the compute skew takes a probabilistic approach to guessing the true skew using the evidence it sees on every reception."
 
-In this model, the Epoch behaves as a governor for stability:
+Gemini's response captured the shift:
 
-- **During Sync**: If nodes are wildly misaligned, the Epoch rises on every round-trip. This "syncing tax" buys time for the Skew logic to pull the nodes together.
+> "This refinement introduces a **probabilistic consensus layer** to timekeeping. By treating the incoming 'Skew' as a piece of evidence rather than a command, you turn time-sync into a data-filtering problem."
 
-- **At Quiescence**: Once the `Wall + Skew` values align within a shared "concurrency window," the Epoch stops rising. The system reaches a **Stable Mean Time**.
+The mechanic of "Time-shifting" pulses before re-broadcasting was particularly clever because it allowed the network to "rehabilitate" a drifting node's data before it spread further. A probabilistic approach solved the Byzantine problem by applying a low-pass filter to time updates.
 
-- **Partial Ordering**: The system prioritises sequential linearity (A caused B) while allowing healthy concurrent "fuzziness" between independent nodes.
+### Naming the Model
 
-### The Result
+I said:
 
-The PCE-HLC creates a self-stabilising "physics" for the network. It uses the **Epoch** to survive chaos (partitions, discovery) and the **Probabilistic Skew** to achieve laminar flow (steady-state operation). It treats time as a distributed agreement that the network "hunts" for through gossip.
+> "Can you roll all of these comments into a definition of this refinement, we should call it the: Probabilistic Consensus Epoch-led HLC"
 
-The Epoch only jumps when the entire network experiences a shift that the Skew buffers can no longer absorb. Until consensus is met, nodes skewed to the past will cause the epoch to rise on every round-trip until they are synced. The epoch guarantees a linear order for sequential events, not all events—giving us the partial concurrent ordering across the network that we want.
+We initially called this the **Probabilistic Consensus Epoch-led HLC (PCE-HLC)**. The name captured the probabilistic nature of the consensus and the epoch-led structure, but it still treated time synchronisation as the primary goal.
 
-This discovery came through another conversation with Gemini, where I challenged the original design and we worked through the flaw systematically. The full discussion is chronicled in [the flaw analysis conversation](https://github.com/bahulneel/medium/blob/main/chats/Gemini-Hybrid%20Logical%20Clock%20Flaw%20Analysis.md).
+### The Separation Realisation
 
-The lesson remains the same: sometimes you have to follow the abstraction where it leads, even when it reveals flaws in your previous thinking. The gold isn't just in the initial discovery—it's also in recognising when your abstraction needs refinement.
+As we continued refining, I hit another wall:
+
+> "I think the name Probabilistic Consensus Epoch-led Hybrid Logical Clock doesn't really tell us what the consensus focused on, and may lead the casual reader to imply that it's the time. We need to separate the data structure from the algorithm with 2 names."
+
+This was a critical insight. We needed to distinguish between the data structure (the timestamp format itself) and the algorithm (how nodes populate and evolve those timestamps). "PCE-HLC" as a single name conflated the state with the process.
+
+Gemini proposed separating them into **Causal Galaxy Timestamp (CGT)** and **Transitive Belief Reconciliation (TBR)**, but I wasn't satisfied. The names felt too clever, too metaphorical.
+
+### Finding the Right Names
+
+I said:
+
+> "I don't like opaque names that are trying to be clever. I'd much prefer something that is information-dense for the data structure name. Epoch-led Hybrid Logical Clock with Skew. Which is independent of how we choose to populate the values or how we use them."
+
+I wanted something information-dense, not opaque or clever. I proposed: **Epoch-led Hybrid Logical Clock with Skew (EHLC-S)**.
+
+This name tells you exactly what it is: a Hybrid Logical Clock where the Epoch is the most significant component, and it explicitly includes Skew as a first-class property. It's independent of how we choose to populate the values or how we use them.
+
+### The Algorithm Name Evolution
+
+Finding the right name for the algorithm took several iterations. We tried various approaches, each revealing something about what we were actually building:
+
+- **Transitive Belief Reconciliation (TBR)**: Too vague, sounded philosophical rather than technical
+- **Probabilistic Skew-Agreement Protocol (PSAP)**: Implied explicit consensus, which we didn't have—we had tacit, asymptotic consensus
+- **Probabilistic Skew Reconciliation (PSR)**: "Reconciliation" gave non-monotonic vibes, which was dangerous for a clock system
+- **Gossiped Probabilistic Evidence Reconciliation (GPER)**: "Evidence Integration" was just jargon for "Belief"
+- **Gossiped Inertial Belief (GIB)**: Getting closer, but missing something about the nature of the system
+- **Gossiped Inertial Belief Propagation (GIBP)**: Better, but "Propagation" implied explicit propagation, when it was actually a side effect of gossip
+- **Believed Inertial Time Frame (BITF)**: This captured what we were actually describing—a state of being rather than a process. It treats the node's temporal perspective as a local coordinate system that is steady (Inertial) and subjective (Believed)
+- **Gossiped Believed Inertial Time Frame (G-BITF)**: The final name, appending the transport mechanism (Gossiped) to the state (BITF) to describe the specific implementation
+
+Gemini's response:
+
+> "That is much sharper. By moving to **Believed Inertial Time Frame (BITF)**, we describe a state of being rather than a process of 'fixing' things. It treats the node's temporal perspective as a local coordinate system that is steady (**Inertial**) and subjective (**Believed**). When we layer your specific implementation on top, we get: **Gossiped Believed Inertial Time Frame (G-BITF)**."
+
+### The Final Model
+
+The transition from the **Sway-based P-HLC** to the **G-BITF** model moves the system from a simple "pull" mechanic to a sophisticated, relativistic coordinate system.
+
+**The Data Structure: Epoch-led Hybrid Logical Clock with Skew (EHLC-S)**
+
+The information-dense structure `[Epoch, [Wall, Skew], Idx]` where Wall is the **Invariant Proper Time** (immutable, allowing the originator to always recognise its own events), Skew is the **Frame Coordinate** (the only mutable component, representing the translation required to map an event into the observer's frame of reference), Epoch provides the causal ratchet for linearity, and Idx provides fractional refinement for internal propagation ordering.
+
+**The Mechanism: Gossiped Believed Inertial Time Frame (G-BITF)**
+
+Instead of nodes "swaying" to match a leader, each node maintains its own **Believed Inertial Time Frame (BITF)**. The system uses incoming gossip as evidence to refine its belief, but its inertia (the 5% blame acceptance) prevents jitter from hijacking the mean. The network doesn't "sync" to a master; it translates between frames, and consensus emerges naturally from the translations.
+
+The EHLC-S structure provides the coordinate system, while G-BITF provides the mechanism for those coordinates to evolve. Together, they create a self-stabilising causal environment where time becomes a frame of reference, not an absolute truth.
+
+The lesson here is different from the main article. Abstractions are never perfect, and sometimes they're just wrong. Taking your new abstractions and playing with them—in your head, on paper, a whiteboard, or in code—is the only way to know how good they are. And when they fail, you iterate. The flaw in the original clock design wasn't a failure; it was an opportunity to discover something better. The journey from the Sway Rule to G-BITF shows that sometimes the abstraction needs to escape completely before you can see what it really wants to be.

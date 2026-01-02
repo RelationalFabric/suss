@@ -322,7 +322,7 @@ Each layer wraps the previous, adding semantic structure (tags, annotations, cau
 - **Skew** is a first-class, mutable property representing the node's belief about its deviation from the network mean time
 - **Idx** disambiguates concurrent events and uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, making the system linearisable [6] even outside individual P-RELs
 
-This **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)** structure [5] extends Lamport's logical clocks [2] with physical time components and probabilistic consensus mechanisms. The nested structure `[Wall, Skew]` separates physical hardware time from network-agreed reality, enabling distributed time consensus without requiring external synchronisation.
+This **Epoch-led Hybrid Logical Clock with Skew (EHLC-S)** structure [5] implements a **Galilean Belief Inertial Time Frame (G-BITF)** model, extending Lamport's logical clocks [2] with physical time components and relativistic frame translation. The nested structure `[Wall, Skew]` implements a Galilean coordinate system where Wall is the invariant proper time and Skew is the frame translation, enabling distributed time consensus through implicit inertial frame translation rather than explicit synchronisation.
 
 #### Core Types
 
@@ -971,25 +971,27 @@ This organic evolution from log-based to P-REL based wasn't planned, but it was 
 
 ### 7.6 Serialisability and Linearity in Distributed Systems
 
-While RaCSTS is designed to make networks serialisable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes the **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)**, a distinct formalism that enables both local serialisability and distributed linearity through probabilistic time consensus.
+While RaCSTS is designed to make networks serialisable values, the T structure ensures that these values maintain causal ordering across distributed boundaries. This section describes the **Epoch-led Hybrid Logical Clock with Skew (EHLC-S)** implementing a **Galilean Belief Inertial Time Frame (G-BITF)** model, a distinct formalism that enables both local serialisability and distributed linearity through relativistic frame translation rather than traditional time synchronisation.
 
-#### The Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)
+#### The Epoch-led Hybrid Logical Clock with Skew (EHLC-S) and Galilean Belief Inertial Time Frame (G-BITF)
 
-The T structure is always `[Epoch, [Wall, Skew], Idx]`. This **Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC)** structure [5] extends Lamport's logical clocks [2] with physical time components and probabilistic consensus mechanisms. The system achieves internal linearisability [6] through fractional refinement of the Idx component.
+The T structure is always `[Epoch, [Wall, Skew], Idx]`. This **Epoch-led Hybrid Logical Clock with Skew (EHLC-S)** structure [5] extends Lamport's logical clocks [2] with physical time components and implements a **Galilean Belief Inertial Time Frame (G-BITF)** model. The system achieves internal linearisability [6] through fractional refinement of the Idx component.
 
 **Component Roles:**
 - **Epoch:** The "Causal Ratchet." A logical counter that ensures linear order when nodes are too far apart to reconcile. This is the "most significant bit" of the timestamp, providing the primary causal ordering
-- **Wall:** The immutable physical hardware timestamp (the "Local Witness"). This is the raw wall clock time at the moment of event creation
-- **Skew:** A first-class, mutable property representing the node's current belief of its offset from the network's "Mean Time." This is not an optimisation—it is a fundamental causal property that enables distributed time consensus
+- **Wall:** The **invariant proper time**—an immutable physical hardware timestamp that witnesses when the event actually occurred. Wall is never adjusted; it serves as the anchor point for frame translation
+- **Skew:** The **only mutable component**—a first-class property representing the node's current belief of its offset from the network's consensus frame. Skew is adjusted through inertial frame translation, allowing events to be "translated" into different local frames while preserving the original Wall as the invariant witness. The adjustment maintains strong inertia against rapid changes
 - **Idx:** Disambiguates concurrent events at the same wall time. Uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to encode internal propagation rounds
 
-The nested structure `[Wall, Skew]` separates physical hardware time from network-agreed reality. The "Believed Time" for any node is `Wall + Skew`, which represents where the node believes it exists in the network's consensus timeline. This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
+The nested structure `[Wall, Skew]` implements a **Galilean coordinate system** where Wall is the invariant proper time and Skew is the frame translation. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. This structure makes the system linearisable not just within a single P-REL, but across P-RELs—enabling distributed coordination while maintaining serialisability.
 
-#### The Probabilistic Sway Rule: Ensuring Linearisability
+**Key Principle:** Wall is immutable. Only Skew is adjusted. This allows the originator to recognise its own events (via the original Wall) while peers "translate" that event into their local frame of reference (via Skew adjustment).
 
-The Probabilistic Sway Rule ensures global linearisability [6] across distributed nodes through a "Refining Step" that reconciles clock drift rather than simply jumping the Epoch. When a node receives a remote pulse with timestamp T_remote, it performs the following reconciliation:
+#### Inertial Belief: Ensuring Linearisability Through Frame Translation
 
-**The Refining Step:**
+The G-BITF model ensures global linearisability [6] across distributed nodes through **inertial belief** and frame translation. Instead of nodes "swaying" to match a leader, each node maintains its own Believed Inertial Time Frame with strong inertia against rapid changes. Nodes resist change—they accept only a small percentage of blame (5% default, reduced for unreliable nodes), creating inertia that prevents Byzantine clock flapping. When a node receives a remote pulse with timestamp T_remote, it performs the following frame translation:
+
+**The Inertial Frame Translation Step:**
 
 1. **Causal Check:** If the remote pulse is logically in the past or concurrent (within a threshold based on `Wall + Skew`), it is processed normally without modification.
 
@@ -998,7 +1000,7 @@ The Probabilistic Sway Rule ensures global linearisability [6] across distribute
    Epoch_local ← max(Epoch_local, Epoch_remote) + 1
    ```
 
-3. **Skew Reconciliation:** The node runs a `computeSkew` function using a probabilistic approach with **minimal blame acceptance**. It:
+3. **Inertial Frame Translation (Skew Adjustment):** The node runs a `computeSkew` function using a probabilistic approach with **inertial belief** (minimal blame acceptance). It:
    - Calculates the "Believed Time" for both nodes: `BelievedTime_local = Wall_local + Skew_local` and `BelievedTime_remote = Wall_remote + Skew_remote`
    - Computes the delta: `Delta = BelievedTime_remote - BelievedTime_local`
    - **Determines blame acceptance percentage** based on historical evidence:
@@ -1011,7 +1013,9 @@ The Probabilistic Sway Rule ensures global linearisability [6] across distribute
    - Updates local Skew: `Skew_local ← Realtime - Wall_local`
    - Updates the remote pulse's Skew: `Skew_remote ← Realtime - Wall_remote`
 
-This approach ensures that a Byzantine actor would need approximately 20 epochs (at 5%) or 100 epochs (at 1%) to drag a good actor all the way to its value, providing time for evidence to accumulate that the remote actor is at fault. The minimal blame acceptance creates strong inertia against rapid changes while still allowing gradual convergence for honest nodes. Historical evidence allows the system to learn which nodes are consistently unreliable and reduce their influence accordingly.
+This approach ensures that a Byzantine actor would need approximately 20 epochs (at 5%) or 100 epochs (at 1%) to drag a good actor all the way to its value, providing time for evidence to accumulate that the remote actor is at fault. The inertial belief (minimal blame acceptance) creates strong resistance to rapid changes—nodes maintain their frame of reference unless given strong evidence to adjust. This allows gradual convergence for honest nodes while preventing Byzantine actors from causing clock flapping. Historical evidence allows the system to learn which nodes are consistently unreliable and reduce their influence accordingly.
+
+**Implicit Consensus:** There is no explicit "time-sync" protocol. The network's "good enough" consensus is an emergent property of nodes constantly re-stamping the Skew values of gossiped pulses to match their local beliefs. Each node translates events from remote frames into its own frame, and consensus emerges naturally from these translations.
 
 **Properties:**
 - **Strict monotonicity:** Timestamps always advance, never regress
@@ -1021,7 +1025,7 @@ This approach ensures that a Byzantine actor would need approximately 20 epochs 
 
 The Epoch carries causality forward during periods of high divergence, while the Skew handles micro-jitter and enables convergence to a stable mean. Physical clock synchronisation (like NTP) remains an optional optimisation that reduces the magnitude of Skews and Epoch heights, but is not required for correctness.
 
-#### Examples: PCE-HLC in Practice
+#### Examples: G-BITF Inertial Belief in Practice
 
 **Example 1: Basic Refining Step**
 
@@ -1034,7 +1038,7 @@ Node A has local timestamp `T_A = [5, [1000, 0], 10]` (Epoch=5, Wall=1000, Skew=
 
 2. **Epoch Ratchet:** `Epoch_A ← max(5, 6) + 1 = 7`
 
-3. **Skew Reconciliation:** `computeSkew` calculates with 5% blame acceptance:
+3. **Inertial Frame Translation:** `computeSkew` calculates with 5% blame acceptance (inertial belief):
    - BelievedTime_A = 1000 + 0 = 1000
    - BelievedTime_B = 1100 + (-50) = 1050
    - Delta = 1050 - 1000 = 50ms
@@ -1117,7 +1121,7 @@ Now Node C sends a new pulse with `T_C = [8, [1200, -100], 5]`. Node A's current
 
 2. **Epoch Ratchet:** `Epoch_A ← max(7, 8) + 1 = 9`
 
-3. **Skew Reconciliation with Historical Evidence:**
+3. **Inertial Frame Translation with Historical Evidence:**
    - BelievedTime_A = 1000 + 0 = 1000
    - BelievedTime_C = 1200 + (-100) = 1100
    - Delta = 1100 - 1000 = 100ms
@@ -1137,7 +1141,7 @@ Result: `T_A = [9, [1000, +1], 10]`, and the pulse is processed with `Skew_C = -
 
 #### Distributed Error Correction: Time-Shifting and Causal Relays
 
-The PCE-HLC implements distributed error correction through time-shifting during the gossip phase. The system operates on a cycle of **Ingest → Reconcile → Process → Quiesce → Broadcast**.
+The G-BITF model implements distributed error correction through frame translation during the gossip phase. The system operates on a cycle of **Ingest → Translate → Process → Quiesce → Broadcast**.
 
 **Time-Shifting Mechanism:**
 
@@ -1155,7 +1159,7 @@ Each transmission bundle contains:
 - `T_Sync`: The sender's current `[Epoch, [Wall, Skew], Idx]` (with Idx containing fractional round if mid-propagation)
 - `Pulse[]`: The array of state transitions being transmitted, each with its own `[Epoch, [Wall, Skew], Idx]` timestamp where Skews have been updated to reflect the sender's consensus belief
 
-**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, [Wall, Skew], Idx]` timestamp. The Probabilistic Sway Rule ensures that when a P-REL receives a remote timestamp, it reconciles both the Epoch (for causal ordering) and the Skew (for time consensus). The Skew component is first-class—it is not just an optimisation, but a fundamental mechanism for achieving distributed time consensus.
+**Important:** When multiple P-RELs coordinate across multiple nodes, each P-REL maintains its own `[Epoch, [Wall, Skew], Idx]` timestamp. The inertial belief mechanism ensures that when a P-REL receives a remote timestamp, it translates the event into its local frame by adjusting both the Epoch (for causal ordering) and the Skew (for frame translation), while maintaining strong inertia against rapid changes. The Skew component is first-class—it is not just an optimisation, but a fundamental mechanism for achieving distributed time consensus through Galilean frame translation.
 
 **Causal Ratcheting:**
 
@@ -1192,7 +1196,7 @@ When initialising a new P-REL, the system sets the initial timestamp T as: **`[E
 - Provides global coarse sync without a central server
 - Even if two nodes have never met, their Epochs will be roughly in the same "galaxy"
 - Nodes with prior network participation start closer to the current causal generation, reducing the initial Epoch jump required when they reconnect
-- The Probabilistic Sway Rule handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will trigger Epoch advancement and Skew reconciliation
+- Inertial belief handles the rest—if a node boots and is behind the network's current causal generation, the first message it receives will trigger Epoch advancement and frame translation (Skew adjustment), but with strong inertia preventing rapid changes
 
 This decision stabilises the "physics" of the system. By anchoring the Epoch to Unix time (adjusted for known skew) at startup, we ensure that even isolated nodes start in a reasonable causal space. The system becomes self-stabilising—it uses gossip to find a fixed point for time (through Skew consensus), space (window size), and state (consensus), while maintaining local consistency at every step. The Skew mechanism actively pulls nodes toward a stable mean time, reducing the frequency of Epoch jumps once the network reaches consensus.
 
@@ -1222,7 +1226,7 @@ This architecture ensures that P-REL serialisation preserves causal order across
 
 **When unpacking a P-REL:**
 - Timestamps are restored exactly, including fractional Idx values and the [Wall, Skew] pair
-- The receiving node applies the Refining Step (Probabilistic Sway) to reconcile the unpacked timestamps with its local clock
+- The receiving node applies inertial frame translation to translate the unpacked timestamps into its local frame of reference
 - The Skew values from the unpacked P-REL are treated as evidence in the probabilistic consensus mechanism
 - Propagation can resume from the exact state where it was serialised
 - The fractional Idx allows the receiving node to correctly order unpacked operations relative to its own ongoing propagation
@@ -1231,7 +1235,7 @@ This architecture ensures that P-REL serialisation preserves causal order across
 - A P-REL serialised on Node A can be deserialised on Node B
 - Node B's local clock may be completely different
 - The Epoch-based ordering ensures Node B correctly orders all operations relative to its local state
-- The Skew reconciliation mechanism allows Node B to adjust its belief about time while maintaining causal correctness
+- The inertial belief mechanism allows Node B to gradually adjust its belief about time while maintaining causal correctness and resisting rapid changes
 - The fractional Idx ensures operations from the unpacked P-REL interleave correctly with Node B's local propagation
 - The probabilistic consensus mechanism actively pulls Node B's Skew toward the network mean, reducing future Epoch jumps
 
@@ -1245,7 +1249,7 @@ RaCSTS provides a natural mechanism for distributed consensus without request-re
 
 The system achieves consensus without a leader through three foundational properties:
 
-1. **The Probabilistic Sway (Refining Step) ensures global linearisability without a central master clock**: When nodes receive remote timestamps, the Refining Step reconciles both Epoch (for causal ordering) and Skew (for time consensus) through probabilistic evidence. No central coordinator is needed—each node independently maintains causal correctness through local logic while actively participating in distributed time consensus.
+1. **Inertial belief ensures global linearisability without a central master clock**: When nodes receive remote timestamps, they translate events from remote frames into their local frame through inertial belief, adjusting both Epoch (for causal ordering) and Skew (for frame translation) while maintaining strong resistance to rapid changes. No central coordinator is needed—each node independently maintains its own Believed Inertial Time Frame with inertia, while translating events from other frames. Consensus emerges implicitly from these translations.
 
 2. **Semilattice join operations guarantee convergence without coordination**: The change set model is a join-semilattice [10]. When two nodes have divergent states, they join their states using `NewState = CurrentState ∨ ProposedState`. Because the data model is a semilattice (like CRDTs [7,8]), both sides are guaranteed to converge on the same result without a central coordinator.
 
@@ -1314,7 +1318,7 @@ for each node in incoming dictionary:
   T_last = get_last_T(node) from local tracking (stored as [Epoch, [Wall, Skew], Idx] per node)
   filtered_pulses = filter pulses where T_incoming > T_last (comparing [Epoch, Wall + Skew, Idx] structures)
   merge filtered_pulses into P-REL.meta (append)
-  process each pulse, applying Refining Step (Probabilistic Sway) to reconcile Epoch and Skew
+  process each pulse, applying inertial frame translation to translate the event into the local frame (adjusting Epoch and Skew with inertia)
 ```
 
 **DELTA:**
@@ -1412,7 +1416,7 @@ This mechanism treats consensus not as heavyweight coordination, but as a natura
 **The Leader-Free Property:**
 
 Consensus in RaCSTS is leader-free because:
-- **No election needed**: The Probabilistic Sway (Refining Step) and semilattice properties eliminate the need for leader election protocols
+- **No election needed**: Inertial belief and semilattice properties eliminate the need for leader election protocols
 - **No single point of failure**: Any node can initiate consensus; no designated coordinator
 - **Partition tolerance**: Network splits don't break consensus—they pause it. Reconnection triggers automatic merge through join operations
 - **Zero-Knowledge verification**: Each node independently verifies causal correctness through local Epoch comparison and OLD value matching (transitions to `stale` on mismatch)
@@ -1705,7 +1709,11 @@ Each solution reveals the next missing object. The journey continues.
 
 **Fractional Idx:** The Idx component of T uses fractional refinement `Idx = BaseIdx + Round / MaxRounds` to track propagation rounds within a logical time step, enabling linearisability even outside individual P-RELs.
 
-**Probabilistic Consensus Epoch-led Hybrid Logical Clock (PCE-HLC) (T):** Logical timestamp structure `[Epoch, [Wall, Skew], Idx]` where Epoch is the causal ratchet, Wall is the immutable physical hardware timestamp, Skew is a first-class mutable property representing the node's belief about its offset from network mean time, and Idx disambiguates concurrent events with fractional refinement. The "Believed Time" is `Wall + Skew`, representing where the node believes it exists in the network's consensus timeline.
+**Galilean Belief Inertial Time Frame (G-BITF):** The relativistic coordinate system model implemented by EHLC-S. Each node maintains its own Believed Inertial Time Frame (BITF) where time is represented as `Wall + Skew`. Wall is the invariant proper time (immutable), and Skew is the frame translation (mutable). Consensus emerges implicitly from the network of frame translations rather than through explicit synchronisation.
+
+**Believed Inertial Time Frame (BITF):** Each node's local frame of reference for time. The BITF is defined by `BelievedTime = Wall + Skew`, where Wall is the invariant proper time and Skew is the frame translation. Nodes translate events from remote frames into their own BITF through inertial frame translation, maintaining strong inertia against rapid changes.
+
+**Epoch-led Hybrid Logical Clock with Skew (EHLC-S) / Galilean Belief Inertial Time Frame (G-BITF) (T):** Logical timestamp structure `[Epoch, [Wall, Skew], Idx]` implementing a Galilean coordinate system. Epoch is the causal ratchet. Wall is the **invariant proper time**—an immutable physical hardware timestamp that witnesses when the event actually occurred; Wall is never adjusted and serves as the anchor point for frame translation. Skew is the **only mutable component**—a first-class property representing the node's belief about its offset from the network's consensus frame; Skew is adjusted through frame reconciliation, allowing events to be translated into different local frames while preserving the original Wall. Idx disambiguates concurrent events with fractional refinement. Each node maintains its own **Believed Inertial Time Frame (BITF)**, where `BelievedTime = Wall + Skew` represents where the node believes it exists in the network's consensus timeline. Consensus emerges implicitly from the network of frame translations rather than through explicit synchronisation.
 
 **Interpretation:** A function that projects a CAnATL to a materialised Value. Defines how a cell's operation history becomes a concrete value. Each cell is an "Interpretation VM."
 
@@ -1745,11 +1753,15 @@ Each solution reveals the next missing object. The journey continues.
 
 **Sync Op:** Specialised Op Relation for consensus. Emits a consensus accumulator that accumulates witnesses as it flows through the gossip fabric. Leader-free consensus mechanism.
 
-**Probabilistic Sway (Refining Step):** When a node receives a remote pulse with timestamp T_remote, it performs a three-step reconciliation: (1) checks if the pulse is logically in the past or concurrent (within threshold), (2) if future, advances Epoch: `Epoch_local ← max(Epoch_local, Epoch_remote) + 1`, (3) runs probabilistic `computeSkew` to reconcile Skew values, treating incoming timestamps as evidence. This ensures global linearisability while actively participating in distributed time consensus through Skew adjustment.
+**Inertial Belief (Frame Translation):** When a node receives a remote pulse with timestamp T_remote, it performs inertial frame translation: (1) checks if the pulse is logically in the past or concurrent (within threshold), (2) if future, advances Epoch: `Epoch_local ← max(Epoch_local, Epoch_remote) + 1`, (3) runs probabilistic `computeSkew` with inertial belief (5% blame acceptance, reduced for nodes with poor history) to translate the event into the local frame by adjusting Skew. The inertial belief creates strong resistance to rapid changes—nodes maintain their frame unless given strong evidence. Wall remains immutable as the invariant proper time. This ensures global linearisability while maintaining each node's Believed Inertial Time Frame with inertia. Consensus emerges implicitly from the network of frame translations.
 
 **T-ordering:** Causal ordering enforced by T timestamps. Operations are processed in T order, ensuring causal correctness. The foundation of monotonicity and serialisability.
 
 **Template Link:** Link using pattern-based selectors (wildcards, constraints) instead of exact node IDs. Expands to concrete links on-demand during propagation. Enables compact graph representation—one template governs many nodes without serialising individual links. Common patterns: collector (N→1), shadow (1→1), relational join (M→N).
+
+**Wall (Invariant Proper Time):** The immutable physical hardware timestamp component of T. Wall witnesses when the event actually occurred and is never adjusted—it serves as the anchor point for frame translation in the G-BITF model. Wall allows the originator to recognise its own events while peers translate that event into their local frame via Skew adjustment.
+
+**Skew (Frame Translation):** The only mutable component of the `[Wall, Skew]` pair in T. Skew represents the node's current belief about its offset from the network's consensus frame. Skew is adjusted through inertial frame translation, allowing events to be translated into different local frames while preserving the original Wall as the invariant witness. The adjustment maintains strong inertia—only a small percentage of blame is accepted (5% default), creating resistance to rapid changes. The "Believed Time" is `Wall + Skew`.
 
 **Value:** Union type `AnATL | AnTL`. The type of "a value" in the system—any serialisable data with optional semantic tags and annotations.
 
